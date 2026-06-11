@@ -1,0 +1,7 @@
+HTTP/1.1 302 Found
+date: Wed, 15 Apr 2026 06:25:21 GMT
+server: uvicorn
+content-length: 0
+location: /manager
+set-cookie: user="{\"id\": 8\054 \"name\": \"\\u05de\\u05e0\\u05d4\\u05dc\"\054 \"username\": \"manager\"\054 \"role\": \"manager\"\054 \"regions\": \"all\"}"; Max-Age=604800; Path=/; SameSite=lax
+

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/static/manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="{{ cfg.company_name }}">
+<link rel="apple-touch-icon" href="/static/logo.png">
+<meta name="theme-color" content="#00327d">
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js')}</script>
+<title>סיכום יומי — {{ cfg.company_name }}</title>
+<style>
+:root {
+  --bg:#eef1f8; --bg2:#ffffff;
+  --card:#ffffff; --border:#dde3ef; --border-h:#b8c5e0;
+  --text:#1a1f36; --muted:#64748b;
+  --primary:{{ cfg.primary_color }}; --primary2:{{ cfg.secondary_color }};
+  --success:#16a34a; --warning:#d97706; --danger:#dc2626;
+  --r:16px; --r-sm:10px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',system-ui,Arial,sans-serif; background:var(--bg); color:var(--text); direction:rtl; min-height:100vh; padding-bottom:30px; }
+
+.app-header { background:var(--primary); padding:0 0 14px; }
+.header-top { display:flex; justify-content:space-between; align-items:center; padding:14px 20px 10px; }
+.header-logo-text { font-size:22px; font-weight:900; letter-spacing:2px; color:white; }
+.header-center { flex:1; text-align:center; }
+.header-title { font-size:18px; font-weight:700; color:white; }
+.header-sub { font-size:12px; color:rgba(255,255,255,0.7); margin-top:2px; }
+.logout-btn { background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); color:rgba(255,255,255,0.9); border-radius:8px; padding:7px 14px; font-size:13px; cursor:pointer; text-decoration:none; }
+
+.day-nav { display:flex; align-items:center; justify-content:space-between; margin:0 16px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.15); border-radius:14px; padding:10px 16px; }
+.nav-btn { background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.2); color:white; border-radius:8px; padding:7px 14px; font-size:14px; cursor:pointer; text-decoration:none; }
+.nav-btn:hover { background:rgba(255,255,255,0.25); }
+.day-info { text-align:center; }
+.day-name { font-size:17px; font-weight:700; color:white; }
+.day-date { font-size:12px; color:rgba(255,255,255,0.7); margin-top:2px; }
+.today-btn { display:inline-block; margin-top:6px; background:rgba(255,255,255,0.22); border:1.5px solid rgba(255,255,255,0.45); color:white; border-radius:20px; padding:3px 14px; font-size:12px; font-weight:700; text-decoration:none; }
+
+.back-link { display:inline-flex; align-items:center; gap:6px; color:rgba(255,255,255,0.8); font-size:13px; text-decoration:none; padding:8px 20px 0; }
+.back-link:hover { color:white; }
+
+.content { padding:16px; }
+
+.agent-block { background:var(--card); border:1px solid var(--border); border-radius:var(--r); margin-bottom:16px; overflow:hidden; box-shadow:0 1px 4px rgba(0,50,125,0.06); }
+.agent-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:linear-gradient(135deg,var(--primary),var(--primary2)); color:white; }
+.agent-header-name { font-size:17px; font-weight:800; }
+.agent-header-stats { display:flex; gap:16px; }
+.stat-pill { background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.3); border-radius:20px; padding:4px 12px; font-size:12px; font-weight:700; text-align:center; }
+.stat-pill span { display:block; font-size:10px; font-weight:400; opacity:0.85; }
+
+.section-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.6px; padding:10px 16px 6px; border-top:1px solid var(--border); display:flex; align-items:center; gap:6px; }
+.section-label:first-of-type { border-top:none; }
+.dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.dot-done    { background:#16a34a; }
+.dot-progress{ background:#f97316; }
+.dot-missed  { background:#dc2626; }
+.dot-pending { background:#94a3b8; }
+
+.store-row { display:flex; align-items:center; justify-content:space-between; padding:8px 16px; border-bottom:1px solid var(--border); font-size:13px; }
+.store-row:last-child { border-bottom:none; }
+.store-name { font-weight:600; }
+.store-meta { font-size:11px; color:var(--muted); margin-top:2px; }
+.store-time { font-size:12px; color:var(--muted); text-align:left; direction:ltr; }
+.badge-done    { background:#dcfce7; color:#16a34a; border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; }
+.badge-progress{ background:#ffedd5; color:#f97316; border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; }
+.badge-missed  { background:#fee2e2; color:#dc2626; border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; }
+.badge-pending { background:#f1f5f9; color:#64748b; border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; }
+
+.empty-section { padding:10px 16px; font-size:13px; color:var(--muted); font-style:italic; }
+.no-data { text-align:center; padding:60px 20px; color:var(--muted); }
+.no-data .icon { font-size:48px; margin-bottom:12px; }
+</style>
+</head>
+<body>
+<div class="app-header">
+  <div class="header-top">
+    <div class="header-logo-text">{{ cfg.company_name }}</div>
+    <div class="header-center">
+      <div class="header-title">סיכום יומי</div>
+      <div class="header-sub">{{ user.name }}</div>
+    </div>
+    <a href="/logout" class="logout-btn">יציאה</a>
+  </div>
+
+  <div style="padding:0 16px 10px;">
+    <a href="/manager" class="back-link">← חזרה לדשבורד</a>
+  </div>
+
+  <div class="day-nav">
+    <a href="/manager/daily-summary?date={{ prev_date }}" class="nav-btn">→</a>
+    <div class="day-info">
+      <div class="day-name">
+        {% set day_names = {'Sunday':'ראשון','Monday':'שני','Tuesday':'שלישי','Wednesday':'רביעי','Thursday':'חמישי','Friday':'שישי','Saturday':'שבת'} %}
+        יום {{ day_names.get(selected_date.strftime('%A'), selected_date.strftime('%A')) }}
+      </div>
+      <div class="day-date">{{ selected_date.strftime('%d/%m/%Y') }}</div>
+      {% if selected_date != today %}
+      <a href="/manager/daily-summary" class="today-btn">היום</a>
+      {% endif %}
+    </div>
+    <a href="/manager/daily-summary?date={{ next_date }}" class="nav-btn">←</a>
+  </div>
+</div>
+
+<div class="content">
+  {% if not summary %}
+  <div class="no-data">
+    <div class="icon">📋</div>
+    <div>אין נתונים להיום</div>
+  </div>
+  {% endif %}
+
+  {% for item in summary %}
+  <div class="agent-block">
+    <div class="agent-header">
+      <div class="agent-header-name">{{ item.agent.name }}</div>
+      <div class="agent-header-stats">
+        <div class="stat-pill">{{ item.done|length }}/{{ item.total }}<span>הושלם</span></div>
+        {% if item.in_progress %}
+        <div class="stat-pill">{{ item.in_progress|length }}<span>בתהליך</span></div>
+        {% endif %}
+        {% if item.missed %}
+        <div class="stat-pill" style="background:rgba(220,38,38,0.3);">{{ item.missed|length }}<span>לא בוצע</span></div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if item.done %}
+    <div class="section-label"><div class="dot dot-done"></div> הושלמו ({{ item.done|length }})</div>
+    {% for entry in item.done %}
+    <div class="store-row">
+      <div>
+        <div class="store-name">{{ entry.store.name }}</div>
+        <div class="store-meta">{{ entry.store.city }} • {{ entry.store.region }}</div>
+      </div>
+      <div style="text-align:left;">
+        <div class="store-time">{{ (entry.visit.check_in_time or '')[:5] }} – {{ (entry.visit.check_out_time or '')[:5] }}</div>
+        {% if entry.visit.duration_minutes %}
+        <div style="font-size:11px;color:var(--muted);">{{ entry.visit.duration_minutes }} דק'</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if item.in_progress %}
+    <div class="section-label"><div class="dot dot-progress"></div> בתהליך ({{ item.in_progress|length }})</div>
+    {% for entry in item.in_progress %}
+    <div class="store-row">
+      <div>
+        <div class="store-name">{{ entry.store.name }}</div>
+        <div class="store-meta">{{ entry.store.city }} • {{ entry.store.region }}</div>
+      </div>
+      <div><span class="badge-progress">פתוח מ-{{ (entry.visit.check_in_time or '')[:5] }}</span></div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if item.missed %}
+    <div class="section-label"><div class="dot dot-missed"></div> לא בוצעו ({{ item.missed|length }})</div>
+    {% for entry in item.missed %}
+    <div class="store-row">
+      <div>
+        <div class="store-name">{{ entry.store.name }}</div>
+        <div class="store-meta">{{ entry.store.city }} • {{ entry.store.region }}</div>
+      </div>
+      <span class="badge-missed">לא בוצע</span>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if item.pending %}
+    <div class="section-label"><div class="dot dot-pending"></div> ממתינים ({{ item.pending|length }})</div>
+    {% for entry in item.pending %}
+    <div class="store-row">
+      <div>
+        <div class="store-name">{{ entry.store.name }}</div>
+        <div class="store-meta">{{ entry.store.city }} • {{ entry.store.region }}</div>
+      </div>
+      <span class="badge-pending">טרם בוצע</span>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if item.total == 0 %}
+    <div class="empty-section">אין לקוחות מתוכננים להיום</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+</body>
+</html>

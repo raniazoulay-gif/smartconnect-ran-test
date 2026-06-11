@@ -1,0 +1,92 @@
+INFO:     Started server process [27188]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8009 (Press CTRL+C to quit)
+INFO:     127.0.0.1:62996 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63000 - "POST /login HTTP/1.1" 302 Found
+INFO:     127.0.0.1:63001 - "GET /store/1?date=2026-04-15&agent_id=5 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50704 - "GET /store/433?date=2026-04-15&agent_id=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52091 - "GET / HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:52091 - "GET /manager HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52091 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52091 - "GET /manager/agent/5?date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64959 - "GET /store/481?date=2026-04-15&agent_id=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64959 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64482 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64482 - "POST /api/comment HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61174 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54379 - "GET / HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:54379 - "GET /dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54379 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52534 - "GET /dashboard?date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50165 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50165 - "GET /manager/agent/5?date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64073 - "GET /logout HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:64073 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60837 - "POST /login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64898 - "POST /login HTTP/1.1" 302 Found
+INFO:     127.0.0.1:64898 - "GET /dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52958 - "GET /manager/agent/5?date=2026-04-16 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52958 - "GET /manager HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52958 - "GET /manager/agent/5?date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52958 - "GET /manager HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50273 - "GET /api/notifications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60890 - "GET /api/notifications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54391 - "GET /store/481?date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54391 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49678 - "POST /api/comment HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62273 - "GET /api/notifications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49678 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49678 - "POST /api/comment HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62889 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56033 - "GET /api/notifications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63433 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61134 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53441 - "GET /api/notifications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54276 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51050 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58325 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61341 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59277 - "GET /dashboard?date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50011 - "GET /dashboard?date=2026-03-31 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50011 - "GET /dashboard?date=2026-04-01 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50011 - "GET /dashboard?date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62153 - "GET /store/481?date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62153 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62153 - "POST /api/checkout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62153 - "GET /store/481?date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62153 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54146 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59776 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59803 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56933 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53740 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55964 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64431 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50960 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58337 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50231 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59770 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65068 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52954 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52274 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63182 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53200 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52484 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64951 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51920 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49299 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57140 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60411 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62709 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58258 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51570 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56922 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50539 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58214 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49827 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62971 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50508 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56728 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50867 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51323 - "GET /api/comments?customer_id=481&visit_date=2026-04-15 HTTP/1.1" 200 OK

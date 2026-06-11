@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/static/manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="{{ cfg.company_name }}">
+<link rel="apple-touch-icon" href="/static/logo.png">
+<meta name="theme-color" content="#00327d">
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js')}</script>
+<title>{% if viewed_agent %}{{ viewed_agent.name }}{% else %}{{ user.name }}{% endif %} — לקוחות היום</title>
+<style>
+:root {
+  --bg:#eef1f8; --bg2:#ffffff;
+  --card:#ffffff; --card-h:#f0f5ff;
+  --border:#dde3ef; --border-h:#b8c5e0;
+  --text:#1a1f36; --muted:#64748b;
+  --primary:{{ cfg.primary_color }}; --primary2:{{ cfg.secondary_color }};
+  --mgr:#16a34a; --mgr2:#15803d;
+  --success:#16a34a; --warning:#d97706; --danger:#dc2626;
+  --r:16px; --r-sm:10px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',system-ui,Arial,sans-serif; background:var(--bg); color:var(--text); direction:rtl; min-height:100vh; padding-bottom:70px; }
+
+.header-bar { height:4px; }
+.header-bar.agent  { background:linear-gradient(90deg,var(--primary),var(--primary2)); }
+.header-bar.manager{ background:linear-gradient(90deg,var(--primary),var(--primary2)); }
+
+.app-header { background:var(--primary); border-bottom:none; padding:0 0 12px; }
+/* שורה 1: לוגו | שם סוכן | יציאה */
+.header-top { display:flex; justify-content:space-between; align-items:center; padding:10px 16px 8px; gap:8px; }
+.header-logo img { height:44px; width:auto; filter:invert(1); mix-blend-mode:screen; flex-shrink:0; }
+.header-logo-text { font-size:18px; font-weight:900; letter-spacing:2px; color:white; flex-shrink:0; }
+.header-center { flex:1; min-width:0; text-align:center; }
+.header-title { font-size:17px; font-weight:800; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.header-sub { font-size:12px; font-weight:600; color:rgba(255,255,255,0.9); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:0.3px; }
+.manager-badge { display:inline-block; background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.35); color:white; border-radius:20px; padding:2px 8px; font-size:10px; font-weight:700; margin-bottom:3px; }
+.action-btn-sm { background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); color:rgba(255,255,255,0.9); border-radius:10px; padding:8px 12px; font-size:13px; font-weight:700; cursor:pointer; text-decoration:none; transition:all 0.2s; white-space:nowrap; flex-shrink:0; font-family:inherit; }
+.action-btn-sm:hover { background:rgba(255,255,255,0.25); color:white; }
+/* שורה 2: כפתורי פעולה (יומן + לקוחות) */
+.header-actions { display:flex; gap:10px; padding:0 16px 4px; }
+.header-action-btn { flex:1; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); border-radius:12px; padding:9px 6px; color:white; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; font-family:inherit; text-decoration:none; transition:all 0.2s; white-space:nowrap; }
+.header-action-btn:hover { background:rgba(255,255,255,0.25); }
+@media (max-width:360px) {
+  .header-logo img { height:36px; }
+  .header-title { font-size:15px; }
+  .header-action-btn { font-size:12px; padding:8px 4px; gap:4px; }
+  .action-btn-sm { padding:7px 9px; font-size:12px; }
+}
+
+.day-nav { display:flex; align-items:center; justify-content:space-between; margin:0 16px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.15); border-radius:14px; padding:10px 16px; }
+.nav-btn { background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.2); color:white; border-radius:10px; padding:12px 20px; font-size:16px; cursor:pointer; text-decoration:none; transition:all 0.2s; }
+.nav-btn:hover { background:rgba(255,255,255,0.25); }
+.day-name { font-size:24px; font-weight:800; color:white; text-align:center; }
+.day-date { font-size:16px; color:rgba(255,255,255,0.85); text-align:center; margin-top:3px; font-weight:600; }
+.today-btn { display:inline-block; margin-top:7px; background:rgba(255,255,255,0.22); border:1.5px solid rgba(255,255,255,0.45); color:white; border-radius:20px; padding:4px 16px; font-size:12px; font-weight:700; cursor:pointer; text-decoration:none; letter-spacing:0.3px; transition:all 0.2s; }
+.today-btn:hover { background:rgba(255,255,255,0.38); }
+
+/* Calendar */
+.cal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:150; }
+.cal-overlay.open { display:block; }
+.cal-box { position:absolute; top:115px; right:16px; background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:14px; width:230px; box-shadow:0 8px 30px rgba(0,50,125,0.15); }
+.cal-box-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.cal-box-title { font-size:13px; font-weight:700; color:var(--text); }
+.cal-box-close { background:#f0f5ff; border:none; border-radius:6px; padding:3px 8px; cursor:pointer; color:var(--primary); font-size:13px; font-weight:700; }
+.month-nav-btn { background:#f0f5ff; border:none; border-radius:5px; padding:3px 10px; font-size:13px; cursor:pointer; color:var(--primary); text-decoration:none; font-weight:700; }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+.cal-dow { text-align:center; font-size:9px; font-weight:700; color:var(--muted); padding:2px 0 4px; }
+.cal-day { text-align:center; border-radius:5px; padding:4px 1px; font-size:12px; font-weight:600; text-decoration:none; color:var(--muted); min-height:24px; display:flex; align-items:center; justify-content:center; }
+.cal-day:hover { background:rgba(0,50,125,0.1); color:var(--text); }
+.cal-day.active { background:linear-gradient(135deg,var(--primary),var(--primary2)); color:white; border-radius:8px; }
+.cal-day.today-mark { border:1.5px solid var(--primary); border-radius:8px; }
+.cal-day.weekend { color:#cbd5e1; }
+.cal-day.empty { pointer-events:none; }
+
+.content { padding:16px; }
+
+.manager-bar { background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:12px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; font-size:14px; color:#92400e; }
+.back-link { background:#fef3c7; color:#92400e; border:none; border-radius:8px; padding:6px 14px; cursor:pointer; font-size:13px; font-weight:600; text-decoration:none; }
+
+.stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
+.stat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:14px 10px; text-align:center; cursor:pointer; transition:all 0.2s; box-shadow:0 1px 4px rgba(0,50,125,0.06); }
+.stat-card:hover { background:var(--card-h); transform:translateY(-1px); }
+.stat-card.active { background:#f0f5ff; border-color:rgba(0,50,125,0.3); box-shadow:0 0 16px rgba(0,50,125,0.1); }
+.stat-num { font-size:26px; font-weight:700; color:var(--primary); }
+.stat-lbl { font-size:11px; color:var(--muted); margin-top:3px; }
+
+.section-title { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.section-title::before { content:''; display:inline-block; width:3px; height:14px; background:linear-gradient(180deg,var(--primary),var(--primary2)); border-radius:2px; }
+
+.store-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:16px 18px; margin-bottom:10px; text-decoration:none; color:inherit; display:block; position:relative; overflow:hidden; transition:all 0.2s; box-shadow:0 1px 4px rgba(0,50,125,0.05); }
+.store-card::after { content:''; position:absolute; bottom:0; right:0; width:4px; height:100%; }
+.store-card.status-done   { background:#f0fdf4; border-color:#bbf7d0; }
+.store-card.status-done::after   { background:var(--success); }
+.store-card.status-in     { background:#fffbeb; border-color:#fde68a; }
+.store-card.status-in::after     { background:var(--warning); }
+.store-card.status-missed { background:#fef2f2; border-color:#fecaca; animation:pulse 2s infinite; }
+.store-card.status-missed::after { background:var(--danger); }
+.store-card.status-none::after   { background:transparent; }
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0)} 50%{box-shadow:0 0 10px 2px rgba(220,38,38,0.15)} }
+.store-card:hover { background:var(--card-h); transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,50,125,0.1); }
+
+.store-row { display:flex; justify-content:space-between; align-items:flex-start; }
+.store-name { font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px; }
+.store-meta { font-size:12px; color:var(--muted); }
+.status-badge { font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap; }
+.badge-done   { background:#dcfce7; color:#16a34a; border:1px solid #bbf7d0; }
+.badge-in     { background:#fef9c3; color:#ca8a04; border:1px solid #fde047; }
+.badge-missed { background:#fee2e2; color:#dc2626; border:1px solid #fecaca; }
+.badge-none   { background:#f1f5f9; color:var(--muted); border:1px solid var(--border); }
+.store-footer { display:flex; gap:12px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:12px; color:var(--muted); flex-wrap:wrap; }
+
+.notes-btn { display:inline-flex; align-items:center; gap:6px; background:#f8fafc; color:var(--muted); border:1px solid var(--border); border-radius:10px; padding:10px 14px; font-size:14px; font-weight:600; cursor:pointer; margin-top:8px; transition:all 0.2s; font-family:inherit; }
+.notes-btn:hover { background:#f0f5ff; color:var(--primary); }
+.notes-btn.has-notes { background:#fffbeb; color:#ca8a04; border-color:#fde68a; }
+
+.empty-state { text-align:center; padding:60px 20px; color:var(--muted); }
+
+/* Customer search */
+.search-wrap { position:relative; margin:0 0 16px; }
+.search-input { width:100%; padding:11px 42px 11px 14px; background:#fff; border:1.5px solid var(--border); border-radius:12px; font-size:14px; font-family:inherit; direction:rtl; color:var(--text); outline:none; transition:all 0.2s; box-shadow:0 1px 4px rgba(0,50,125,0.06); }
+.search-input:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(0,50,125,0.08); }
+.search-input::placeholder { color:#94a3b8; }
+.search-icon { position:absolute; right:13px; top:50%; transform:translateY(-50%); font-size:16px; pointer-events:none; }
+.search-dropdown { position:absolute; top:calc(100%+4px); right:0; left:0; background:#fff; border:1px solid var(--border); border-radius:12px; box-shadow:0 8px 30px rgba(0,50,125,0.12); z-index:100; max-height:240px; overflow-y:auto; display:none; }
+.search-dropdown.open { display:block; }
+.search-item { padding:10px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; }
+.search-item:last-child { border-bottom:none; }
+.search-item:hover { background:#f0f5ff; }
+.search-item-name { font-size:14px; font-weight:600; color:var(--text); }
+.search-item-meta { font-size:11px; color:var(--muted); margin-top:2px; }
+.search-item-agent { font-size:11px; font-weight:700; color:var(--primary); background:#e8f0fe; border-radius:10px; padding:2px 8px; }
+.search-empty { padding:16px; text-align:center; color:var(--muted); font-size:13px; }
+.hist-btn { background:var(--primary); color:white; border:none; border-radius:8px; padding:5px 10px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+
+/* History modal */
+.hist-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:300; align-items:flex-end; }
+.hist-overlay.open { display:flex; }
+.hist-panel { width:100%; background:#fff; border-radius:24px 24px 0 0; max-height:88vh; display:flex; flex-direction:column; animation:slideUp 0.3s ease; }
+.hist-header { background:linear-gradient(135deg,var(--primary),var(--primary2)); color:white; padding:18px 20px; border-radius:24px 24px 0 0; display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+.hist-title { font-size:17px; font-weight:700; }
+.hist-close { background:rgba(255,255,255,0.2); border:none; color:white; border-radius:8px; padding:6px 12px; font-size:18px; cursor:pointer; }
+.hist-body { flex:1; overflow-y:auto; padding:16px; }
+.hist-visit { background:#f8fafc; border:1px solid var(--border); border-radius:14px; padding:14px 16px; margin-bottom:12px; }
+.hist-visit-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.hist-date { font-size:14px; font-weight:700; color:var(--text); }
+.hist-agent-badge { font-size:11px; font-weight:700; color:white; background:var(--primary); border-radius:20px; padding:3px 10px; }
+.hist-meta { display:flex; gap:14px; font-size:12px; color:var(--muted); margin-bottom:8px; flex-wrap:wrap; }
+.hist-notes { background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:9px 12px; font-size:13px; color:#92400e; margin-bottom:8px; }
+.hist-comment { padding:7px 10px; border-radius:8px; font-size:13px; margin-bottom:4px; }
+.hist-comment.mgr   { background:#e8f0fe; color:var(--primary); }
+.hist-comment.agent { background:#f0fdf4; color:#15803d; }
+.hist-comment-meta { font-size:10px; opacity:0.7; margin-top:2px; }
+.hist-empty { text-align:center; padding:40px; color:var(--muted); font-size:14px; }
+.empty-state .icon { font-size:60px; margin-bottom:16px; }
+.empty-state p { font-size:16px; }
+
+/* Modal */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; align-items:center; justify-content:center; padding:20px; }
+.modal-overlay.open { display:flex; }
+.modal { background:var(--bg2); border:1px solid var(--border); border-radius:20px; padding:24px; width:100%; max-width:500px; box-shadow:0 12px 40px rgba(0,50,125,0.15); }
+.modal h3 { font-size:18px; font-weight:700; color:var(--text); margin-bottom:16px; }
+.modal textarea { width:100%; padding:14px; background:#f8fafc; border:1.5px solid var(--border); border-radius:12px; font-size:15px; font-family:inherit; color:var(--text); resize:vertical; min-height:120px; text-align:right; direction:rtl; margin-bottom:14px; outline:none; transition:all 0.2s; }
+.modal textarea::placeholder { color:#94a3b8; }
+.modal textarea:focus { border-color:var(--primary); background:#f0f5ff; }
+.modal-btns { display:flex; gap:10px; }
+.modal-save { flex:2; background:linear-gradient(135deg,var(--primary),var(--primary2)); color:white; border:none; border-radius:12px; padding:14px; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; }
+.modal-cancel { flex:1; background:#f1f5f9; color:var(--muted); border:1px solid var(--border); border-radius:12px; padding:14px; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; }
+
+.toast-agent { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:white; border:1px solid var(--border); color:var(--text); padding:12px 24px; border-radius:12px; font-size:15px; font-weight:600; display:none; z-index:300; box-shadow:0 4px 16px rgba(0,50,125,0.12); }
+
+/* Agent general chat — float approach (works regardless of RTL/flex) */
+.gchat-wrap { flex:1; overflow-y:auto; padding:16px; min-height:0; background:#f8fafc; }
+.gchat-row { overflow:hidden; margin-bottom:10px; }
+.chat-msg { max-width:72%; padding:10px 14px; border-radius:16px; font-size:14px; line-height:1.5; display:block; }
+.chat-msg.agent-msg   { background:#dbeafe; color:#1e3a8a; }
+.chat-msg.manager-msg { background:#dcfce7; color:#14532d; }
+.chat-msg.mine   { float:right; border-bottom-right-radius:4px; }
+.chat-msg.theirs { float:left;  border-bottom-left-radius:4px; }
+.chat-bubble-name { font-size:11px; font-weight:700; opacity:0.65; margin-bottom:3px; }
+.chat-meta { font-size:11px; opacity:0.6; margin-top:5px; }
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+
+/* Bottom bar */
+.bottom-bar { position:fixed; bottom:0; left:0; right:0; background:rgba(255,255,255,0.97); backdrop-filter:blur(12px); border-top:1px solid var(--border); padding:12px 16px 16px; display:flex; gap:8px; z-index:50; box-shadow:0 -2px 12px rgba(0,50,125,0.08); }
+.bar-btn { flex:1; padding:14px 8px; border:none; border-radius:var(--r-sm); font-size:15px; font-weight:700; cursor:pointer; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:5px; transition:all 0.2s; font-family:inherit; }
+.btn-primary { background:linear-gradient(135deg,var(--primary),var(--primary2)); color:white; box-shadow:0 4px 14px rgba(0,50,125,0.2); }
+.btn-ghost   { background:#f1f5f9; color:var(--text); border:1px solid var(--border); }
+.btn-mgr     { background:linear-gradient(135deg,var(--primary),var(--primary2)); color:white; }
+.btn-danger  { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+.btn-eilat   { background:linear-gradient(135deg,#0ea5e9,#38bdf8); color:white; }
+.bar-btn:hover { transform:translateY(-1px); filter:brightness(0.95); }
+
+/* Eilat panel */
+.eilat-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:200; display:none; align-items:flex-end; }
+.eilat-overlay.open { display:flex; }
+.eilat-panel { width:100%; background:#fff; border-radius:24px 24px 0 0; max-height:88vh; display:flex; flex-direction:column; animation:slideUp 0.3s ease; }
+.eilat-header { background:linear-gradient(135deg,#0ea5e9,#38bdf8); color:white; padding:18px 20px; border-radius:24px 24px 0 0; display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+.eilat-title { font-size:17px; font-weight:700; }
+.eilat-close { background:rgba(255,255,255,0.2); border:none; color:white; border-radius:8px; padding:6px 12px; font-size:18px; cursor:pointer; }
+.eilat-body { flex:1; overflow-y:auto; padding:16px; }
+.eilat-card { background:#f0f9ff; border:1px solid #bae6fd; border-radius:14px; padding:14px 16px; margin-bottom:10px; text-decoration:none; color:inherit; display:block; transition:all 0.2s; }
+.eilat-card:hover { background:#e0f2fe; transform:translateY(-1px); }
+.eilat-card-name { font-size:15px; font-weight:700; color:#0369a1; margin-bottom:3px; }
+.eilat-card-meta { font-size:12px; color:#64748b; }
+
+/* My Customers panel */
+.mycust-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:200; display:none; align-items:flex-end; justify-content:center; }
+.mycust-overlay.open { display:flex; }
+.mycust-panel { width:100%; max-width:560px; background:#fff; border-radius:24px 24px 0 0; max-height:90vh; display:flex; flex-direction:column; animation:slideUp 0.3s ease; }
+@media (min-width:600px) {
+  .mycust-overlay { align-items:center; }
+  .mycust-panel { border-radius:20px; max-height:80vh; }
+}
+.mycust-header { background:linear-gradient(135deg,var(--primary),var(--primary2)); color:white; padding:18px 20px; border-radius:24px 24px 0 0; display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+.mycust-title { font-size:17px; font-weight:700; }
+.mycust-close { background:rgba(255,255,255,0.2); border:none; color:white; border-radius:8px; padding:6px 12px; font-size:18px; cursor:pointer; font-family:inherit; }
+.mycust-search { padding:12px 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.mycust-search input { width:100%; padding:10px 14px; border:1.5px solid var(--border); border-radius:12px; font-size:15px; font-family:inherit; direction:rtl; outline:none; }
+.mycust-search input:focus { border-color:var(--primary); }
+.mycust-body { flex:1; overflow-y:auto; padding:12px 16px; }
+.mycust-day-group { margin-bottom:18px; }
+.mycust-day-label { font-size:12px; font-weight:700; color:var(--primary); background:#eff6ff; border-radius:8px; padding:4px 10px; display:inline-block; margin-bottom:8px; }
+.mycust-card { background:#f8fafc; border:1px solid var(--border); border-radius:14px; padding:12px 14px; margin-bottom:4px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition:all 0.15s; }
+.mycust-card:hover { background:#eff6ff; border-color:var(--primary); }
+.mycust-card.open { background:#eff6ff; border-color:var(--primary); border-bottom-left-radius:4px; border-bottom-right-radius:4px; }
+.mycust-card-info { flex:1; }
+.mycust-card-name { font-size:15px; font-weight:700; color:var(--text); margin-bottom:2px; }
+.mycust-card-meta { font-size:12px; color:var(--muted); }
+.mycust-card-arrow { color:var(--primary); font-size:12px; flex-shrink:0; margin-right:8px; transition:transform 0.2s; }
+.mycust-dates { display:none; flex-direction:column; gap:6px; padding:6px 14px 12px; background:#eff6ff; border:1px solid var(--primary); border-top:none; border-radius:0 0 14px 14px; margin-bottom:10px; }
+.mycust-date-btn { display:block; background:white; border:1px solid #bfdbfe; border-radius:10px; padding:10px 14px; font-size:14px; font-weight:600; color:var(--primary); text-decoration:none; text-align:center; transition:all 0.15s; }
+.mycust-date-btn:hover { background:#dbeafe; transform:translateY(-1px); }
+.mycust-empty { text-align:center; color:var(--muted); padding:40px 20px; font-size:15px; }
+</style>
+</head>
+<body>
+
+<div class="header-bar {% if manager_view %}manager{% else %}agent{% endif %}"></div>
+<div class="app-header">
+  <!-- שורה 1: לוגו | שם סוכן | יציאה/מנהל -->
+  <div class="header-top">
+    <div class="header-logo">
+      <img src="/static/logo.png" alt="{{ cfg.company_name }}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <div class="header-logo-text" style="display:none">{{ cfg.company_name }}</div>
+    </div>
+    <div class="header-center">
+      {% if manager_view %}
+      <div class="manager-badge">👁️ תצוגת מנהל</div>
+      <div class="header-title">{{ viewed_agent.name }}</div>
+      {% else %}
+      <div class="header-title">{{ user.name }}</div>
+      {% endif %}
+      <div class="header-sub">{{ selected_date.strftime('%d/%m/%Y') }} &nbsp;|&nbsp; יום {{ hebrew_day_name }} &nbsp;|&nbsp; שבוע {{ week_num }}</div>
+    </div>
+    {% if manager_view %}
+    <a href="/manager" class="action-btn-sm">← מנהל</a>
+    {% else %}
+    <a href="/logout" class="action-btn-sm">יציאה</a>
+    {% endif %}
+  </div>
+  <!-- שורה 2: כפתורי פעולה -->
+  <div class="header-actions">
+    <button class="header-action-btn" onclick="toggleCal()">📅 יומן פגישות</button>
+    {% if not manager_view %}
+    <button class="header-action-btn" onclick="openMyCust()">👥 הלקוחות שלי</button>
+    {% endif %}
+  </div>
+
+  <div class="day-nav">
+    <a href="{% if manager_view %}/manager/agent/{{ viewed_agent.id }}?date={{ prev_date }}{% else %}/dashboard?date={{ prev_date }}{% endif %}" class="nav-btn">◀ אתמול</a>
+    <div style="text-align:center">
+      <div class="day-name">יום {{ hebrew_day_name }}</div>
+      <div class="day-date">{{ selected_date.strftime('%d/%m/%Y') }}</div>
+      {% if selected_date != today %}
+      <a href="{% if manager_view %}/manager/agent/{{ viewed_agent.id }}{% else %}/dashboard{% endif %}" class="today-btn">📅 היום</a>
+      {% endif %}
+    </div>
+    <a href="{% if manager_view %}/manager/agent/{{ viewed_agent.id }}?date={{ next_date }}{% else %}/dashboard?date={{ next_date }}{% endif %}" class="nav-btn">מחר ▶</a>
+  </div>
+</div>
+
+<!-- Calendar — JS-rendered, no page reload on month change -->
+<div class="cal-overlay" id="calOverlay" onclick="if(event.target===this)closeCal()">
+  <div class="cal-box">
+    <div class="cal-box-header">
+      <button class="month-nav-btn" onclick="calPrevMonth()">◀</button>
+      <span class="cal-box-title" id="calMonthTitle"></span>
+      <button class="month-nav-btn" onclick="calNextMonth()">▶</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div style="text-align:center;margin-top:10px">
+      <a href="#" onclick="calGoToday();return false;" style="font-size:12px;color:var(--primary);text-decoration:none;font-weight:700">📅 היום</a>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  {% if manager_view %}
+  <!-- חיפוש לקוח — למנהל בלבד -->
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="customerSearch" type="text" placeholder="חפש לקוח..." autocomplete="off" oninput="searchCustomers(this.value)">
+    <div class="search-dropdown" id="searchDropdown"></div>
+  </div>
+  {% endif %}
+
+  {% if manager_view %}
+  <div class="manager-bar">
+    <span>👁️ מצב תצוגת מנהל — {{ viewed_agent.name }}</span>
+    <a href="/manager" class="back-link">← חזרה</a>
+  </div>
+  {% endif %}
+
+  {% set done_count = namespace(n=0) %}
+  {% for v in visits_map.values() %}
+    {% if v.check_out_time and not v.is_phone %}{% set done_count.n = done_count.n + 1 %}{% endif %}
+  {% endfor %}
+
+  <div class="stats-row">
+    <div class="stat-card active" id="stat-all" onclick="filterStores('all')">
+      <div class="stat-num">{{ customers|length }}</div>
+      <div class="stat-lbl">חנויות היום</div>
+    </div>
+    <div class="stat-card" id="stat-visited" onclick="filterStores('visited')">
+      <div class="stat-num" style="color:var(--success)">{{ done_count.n }}</div>
+      <div class="stat-lbl">ביקורים</div>
+    </div>
+    <div class="stat-card" id="stat-remaining" onclick="filterStores('remaining')">
+      <div class="stat-num" style="color:var(--warning)">{{ customers|length - done_count.n }}</div>
+      <div class="stat-lbl">נותרו</div>
+    </div>
+  </div>
+
+  {% if customers %}
+  <div class="section-title">חנויות לביקור</div>
+
+  {% for store in customers %}
+  {% set visit = visits_map.get(store.id) %}
+  {% if visit and visit.check_out_time %}
+    {% set status = 'done' %} {% set badge_text = '✅ הושלם' %} {% set badge_class = 'badge-done' %}
+  {% elif visit and visit.check_in_time %}
+    {% set status = 'in' %} {% set badge_text = '🟡 בפנים' %} {% set badge_class = 'badge-in' %}
+  {% elif is_after_17 and selected_date == today %}
+    {% set status = 'missed' %} {% set badge_text = '🔴 לא בוקר' %} {% set badge_class = 'badge-missed' %}
+  {% else %}
+    {% set status = 'none' %} {% set badge_text = '⏳ טרם ביקרת' %} {% set badge_class = 'badge-none' %}
+  {% endif %}
+
+  <a href="/store/{{ store.id }}?date={{ selected_date_str }}{% if manager_view and viewed_agent %}&agent_id={{ viewed_agent.id }}{% endif %}" class="store-card status-{{ status }}">
+    <div class="store-row">
+      <div>
+        <div class="store-name">
+          {% if store.traffic_light %}
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{{ TRAFFIC_LIGHT_COLORS.get(store.traffic_light,'#ccc') }};margin-left:6px;vertical-align:middle"></span>
+          {% endif %}
+          {{ store.name }}
+        </div>
+        <div class="store-meta">{{ store.city }}{% if store.address %} — {{ store.address }}{% endif %}</div>
+      </div>
+      <span class="status-badge {{ badge_class }}">{{ badge_text }}</span>
+      {% if visit and visit.is_phone %}<span style="background:#fed7aa;color:#c2410c;border:1px solid #fb923c;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;margin-right:4px">📞</span>{% endif %}
+    </div>
+    <div class="store-footer">
+      <span>📦 אספקה: יום {{ store.delivery_day }}</span>
+      <span>🗓️ ביקור: יום {{ store.assigned_visit_day or store.visit_day }}</span>
+      <span>🗺️ {{ store.region }}</span>
+      {% if visit and visit.duration_minutes %}<span>⏱️ {{ visit.duration_minutes }} דקות</span>{% endif %}
+    </div>
+    {% if not manager_view %}
+    <button class="notes-btn {% if visit and visit.notes %}has-notes{% endif %}"
+            onclick="event.preventDefault(); openNotes({{ store.id }}, '{{ store.name|replace("'", "\\'") }}', `{{ (visit.notes or '')|replace('`','\\`') if visit else '' }}`)">
+      {% if visit and visit.notes %}📝 יש הערה{% else %}📝 הוסף הערה{% endif %}
+    </button>
+    {% endif %}
+  </a>
+  {% endfor %}
+
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">
+      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="6" y="14" width="60" height="52" rx="8" fill="#e0e7ff"/>
+        <rect x="6" y="14" width="60" height="18" rx="8" fill="#6366f1"/>
+        <rect x="6" y="26" width="60" height="6" fill="#6366f1"/>
+        <rect x="22" y="6" width="6" height="16" rx="3" fill="#4f46e5"/>
+        <rect x="44" y="6" width="6" height="16" rx="3" fill="#4f46e5"/>
+        <rect x="16" y="42" width="10" height="10" rx="2" fill="#a5b4fc"/>
+        <rect x="31" y="42" width="10" height="10" rx="2" fill="#a5b4fc"/>
+        <rect x="46" y="42" width="10" height="10" rx="2" fill="#a5b4fc"/>
+      </svg>
+    </div>
+    <p>אין חנויות לביקור ביום זה</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Notes Modal -->
+<div class="modal-overlay" id="notesModal">
+  <div class="modal">
+    <h3 id="modalTitle">📝 הערות</h3>
+    <textarea id="modalNotes" placeholder="כתוב הערה על הביקור בחנות זו..."></textarea>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal()">✖ בטל</button>
+      <button class="modal-save" onclick="saveModalNotes()">💾 שמור הערה</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-agent" id="toastAgent"></div>
+
+<!-- General Chat Modal -->
+<div class="modal-overlay" id="generalChatModal" style="align-items:flex-end;padding:0">
+  <div style="background:var(--bg2);border-radius:24px 24px 0 0;width:100%;max-height:80vh;display:flex;flex-direction:column;animation:slideUp 0.3s ease;border-top:1px solid var(--border)">
+    <div style="background:linear-gradient(135deg,var(--primary),var(--primary2));color:white;padding:16px 20px;border-radius:24px 24px 0 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+      <div style="font-size:17px;font-weight:700">💬 שיחה עם המנהל</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="closeGeneralChat()" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:8px;padding:6px 12px;font-size:16px;cursor:pointer">✕</button>
+      </div>
+    </div>
+    <div id="generalChatList" class="gchat-wrap" style="max-height:50vh"></div>
+    <div style="padding:12px 16px 20px;border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0">
+      <button onclick="sendGeneralChat()" style="background:linear-gradient(135deg,var(--primary),var(--primary2));color:white;border:none;border-radius:12px;padding:12px 18px;font-size:18px;cursor:pointer">➤</button>
+      <input id="generalChatInput" type="text" placeholder="כתוב הודעה למנהל..."
+             style="flex:1;padding:12px 14px;background:#f8fafc;border:1.5px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;direction:rtl;text-align:right;color:var(--text);outline:none"
+             onkeydown="if(event.key==='Enter') sendGeneralChat()">
+    </div>
+  </div>
+</div>
+
+{% if eilat_customers %}
+<!-- EILAT PANEL -->
+<div class="eilat-overlay" id="eilatOverlay" onclick="if(event.target===this)closeEilat()">
+  <div class="eilat-panel">
+    <div class="eilat-header">
+      <div class="eilat-title">🏖️ לקוחות אילת ({{ eilat_customers|length }})</div>
+      <button class="eilat-close" onclick="closeEilat()">✕</button>
+    </div>
+    <div class="eilat-body">
+      {% for store in eilat_customers %}
+      <a href="/store/{{ store.id }}?date={{ selected_date_str }}" class="eilat-card">
+        <div class="eilat-card-name">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#38bdf8;margin-left:6px;vertical-align:middle"></span>
+          {{ store.name }}
+        </div>
+        <div class="eilat-card-meta">{{ store.city }}{% if store.address %} — {{ store.address }}{% endif %}</div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- HISTORY PANEL -->
+<div class="hist-overlay" id="histOverlay" onclick="if(event.target===this)closeHist()">
+  <div class="hist-panel">
+    <div class="hist-header">
+      <div class="hist-title" id="histTitle">📋 היסטוריית ביקורים</div>
+      <button class="hist-close" onclick="closeHist()">✕</button>
+    </div>
+    <div class="hist-body" id="histBody"><div class="hist-empty">טוען...</div></div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  {% if manager_view %}
+    <a href="/manager" class="bar-btn btn-ghost">◀ חזרה</a>
+    <a href="/manager/agent/{{ viewed_agent.id }}?date={{ selected_date_str }}" class="bar-btn btn-primary">🔄 רענן</a>
+    <button class="bar-btn btn-danger" onclick="resetDay({{ viewed_agent.id }})">🗑️ איפוס</button>
+    {% if eilat_customers %}
+    <button class="bar-btn btn-eilat" onclick="openEilatPanel()">🏖️ אילת</button>
+    {% endif %}
+  {% else %}
+    <a href="/dashboard?date={{ today }}" class="bar-btn btn-ghost">📅 היום</a>
+    <button class="bar-btn btn-ghost" onclick="location.reload()">🔄 רענן</button>
+    <button id="chat-btn" class="bar-btn btn-ghost" onclick="openGeneralChat()">💬 צ'אט <span id="agent-chat-badge" style="display:none;background:#dc2626;color:white;border-radius:10px;padding:1px 7px;font-size:12px;font-weight:800;vertical-align:middle;margin-right:3px"></span></button>
+    {% if user.username in ('shirel', 'shirael') or (manager_view and viewed_agent and viewed_agent.username in ('shirel', 'shirael')) %}
+    <button class="bar-btn btn-eilat" onclick="openEilatPanel()">🏖️ אילת</button>
+    {% endif %}
+  {% endif %}
+</div>
+
+<!-- MY CUSTOMERS PANEL -->
+{% if not manager_view %}
+<div class="mycust-overlay" id="mycustOverlay" onclick="if(event.target===this)closeMyCust()">
+  <div class="mycust-panel">
+    <div class="mycust-header">
+      <div class="mycust-title">👥 הלקוחות שלי</div>
+      <button class="mycust-close" onclick="closeMyCust()">✕</button>
+    </div>
+    <div class="mycust-search">
+      <input type="text" id="mycustSearch" placeholder="🔍 חפש לקוח..." oninput="filterMyCust(this.value)" autocomplete="off">
+    </div>
+    <div class="mycust-body" id="mycustBody"><div class="mycust-empty">⏳ טוען...</div></div>
+  </div>
+</div>
+{% endif %}
+
+<script>
+let currentCustomerId = null;
+const VISIT_DATE = '{{ selected_date_str }}';
+const AGENT_CLEAR_KEY = 'gcClearedAt_{{ user.id if not manager_view else viewed_agent.id }}';
+
+function openNotes(customerId, storeName, existingNotes) {
+  currentCustomerId = customerId;
+  document.getElementById('modalTitle').textContent = '📝 הערות — ' + storeName;
+  document.getElementById('modalNotes').value = existingNotes || '';
+  document.getElementById('notesModal').classList.add('open');
+  setTimeout(() => document.getElementById('modalNotes').focus(), 100);
+}
+function closeModal() { document.getElementById('notesModal').classList.remove('open'); currentCustomerId = null; }
+
+function showToastAgent(msg) {
+  const t = document.getElementById('toastAgent');
+  t.textContent = msg; t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 2500);
+}
+
+async function saveModalNotes() {
+  const notes = document.getElementById('modalNotes').value.trim();
+  if (!notes) { closeModal(); return; }
+  const btn = document.querySelector('.modal-save');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ שומר...'; }
+  const res = await fetch('/api/notes', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({customer_id:currentCustomerId, visit_date:VISIT_DATE, notes})
+  });
+  if ((await res.json()).status === 'ok') {
+    if (btn) {
+      btn.textContent = '✅ נשמר';
+      btn.style.background = 'linear-gradient(135deg,#16a34a,#15803d)';
+    }
+    setTimeout(() => { closeModal(); location.reload(); }, 900);
+  }
+}
+document.getElementById('notesModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+
+// auto-reload רק לסוכן — לא למנהל (כדי שכפתור חזרה יעבוד)
+{% if not manager_view %}
+setInterval(() => {
+  const modalOpen = document.getElementById('notesModal').classList.contains('open');
+  const chatOpen = document.getElementById('generalChatModal').classList.contains('open');
+  const isTyping = ['INPUT','TEXTAREA'].includes((document.activeElement||{}).tagName);
+  if (!modalOpen && !chatOpen && !isTyping) location.reload();
+}, 60000);
+{% endif %}
+
+// ── Calendar (JS-rendered, stays open between months) ──────────────────
+const _CAL_SELECTED = '{{ selected_date_str }}';
+const _CAL_TODAY    = '{{ today }}';
+const _CAL_MGR      = {{ 'true' if manager_view else 'false' }};
+const _CAL_AGENT_ID = {{ viewed_agent.id if manager_view else 'null' }};
+const _HEB_MONTHS   = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+
+let _calYear, _calMonth;
+
+function _calDateUrl(dateStr) {
+  return _CAL_MGR ? `/manager/agent/${_CAL_AGENT_ID}?date=${dateStr}` : `/dashboard?date=${dateStr}`;
+}
+
+function renderCal() {
+  document.getElementById('calMonthTitle').textContent = `${_HEB_MONTHS[_calMonth]} ${_calYear}`;
+  const DOW = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
+  let html = DOW.map(d => `<div class="cal-dow">${d}</div>`).join('');
+  const firstDow = new Date(_calYear, _calMonth, 1).getDay(); // 0=Sun
+  for (let i = 0; i < firstDow; i++) html += '<div class="cal-day empty"></div>';
+  const daysInMonth = new Date(_calYear, _calMonth + 1, 0).getDate();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${_calYear}-${String(_calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow = new Date(_calYear, _calMonth, d).getDay();
+    const isWE = dow === 5 || dow === 6;
+    const cls  = ['cal-day', ds===_CAL_SELECTED?'active':'', ds===_CAL_TODAY?'today-mark':'', isWE?'weekend':''].filter(Boolean).join(' ');
+    html += `<a class="${cls}" href="${_calDateUrl(ds)}" onclick="closeCal()">${d}</a>`;
+  }
+  document.getElementById('calGrid').innerHTML = html;
+}
+
+function toggleCal() {
+  const ov = document.getElementById('calOverlay');
+  if (ov.classList.contains('open')) { closeCal(); return; }
+  const sel = new Date(_CAL_SELECTED);
+  _calYear  = sel.getFullYear();
+  _calMonth = sel.getMonth();
+  renderCal();
+  ov.classList.add('open');
+}
+function closeCal()      { document.getElementById('calOverlay').classList.remove('open'); }
+function calPrevMonth()  { if (--_calMonth < 0) { _calMonth=11; _calYear--; } renderCal(); }
+function calNextMonth()  { if (++_calMonth > 11) { _calMonth=0;  _calYear++; } renderCal(); }
+function calGoToday()    { location.href = _calDateUrl(_CAL_TODAY); }
+
+// ── MY CUSTOMERS PANEL ────────────────────────────────────────────────────────
+const HEB_TO_JSDAY  = {'א':0,'ב':1,'ג':2,'ד':3,'ה':4,'ו':5,'ש':6};
+const HEB_DAY_FULL  = {'א':'ראשון','ב':'שני','ג':'שלישי','ד':'רביעי','ה':'חמישי','ו':'שישי','ש':'שבת'};
+const HEB_DAY_SHORT = {'א':'א׳ ראשון','ב':'ב׳ שני','ג':'ג׳ שלישי','ד':'ד׳ רביעי','ה':'ה׳ חמישי','ו':'ו׳ שישי','ש':'ש׳ שבת'};
+let _mycustAll = [];
+
+function getNextNDates(hebDay, n) {
+  n = n || 6;
+  const target = HEB_TO_JSDAY[hebDay];
+  if (target === undefined) return [];
+  const dates = [];
+  const today = new Date(); today.setHours(0,0,0,0);
+  let diff = (target - today.getDay() + 7) % 7;
+  // diff===0 → include today
+  const d = new Date(today); d.setDate(today.getDate() + diff);
+  for (let i = 0; i < n; i++) {
+    dates.push(new Date(d));
+    d.setDate(d.getDate() + 7);
+  }
+  return dates;
+}
+function fmtDate(d) {
+  if (!d) return '';
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+}
+function dateToStr(d) {
+  if (!d) return '';
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+async function openMyCust() {
+  document.getElementById('mycustOverlay').classList.add('open');
+  document.getElementById('mycustSearch').value = '';
+  if (_mycustAll.length === 0) {
+    document.getElementById('mycustBody').innerHTML = '<div class="mycust-empty">⏳ טוען...</div>';
+    try {
+      const res = await fetch('/api/my-customers');
+      const data = await res.json();
+      _mycustAll = data.customers || [];
+    } catch(e) {
+      document.getElementById('mycustBody').innerHTML = '<div class="mycust-empty">❌ שגיאה בטעינה</div>';
+      return;
+    }
+  }
+  renderMyCust(_mycustAll);
+}
+
+function closeMyCust() {
+  document.getElementById('mycustOverlay').classList.remove('open');
+}
+
+function filterMyCust(q) {
+  q = q.trim();
+  if (!q) { renderMyCust(_mycustAll); return; }
+  const lower = q.toLowerCase();
+  const filtered = _mycustAll.filter(c =>
+    (c.name && c.name.toLowerCase().includes(lower)) ||
+    (c.city && c.city.toLowerCase().includes(lower)) ||
+    (c.region && c.region.toLowerCase().includes(lower))
+  );
+  renderMyCust(filtered);
+}
+
+function toggleCustDates(card, hebDay, custId) {
+  const datesDiv = card.nextElementSibling;
+  const arrow = card.querySelector('.mycust-card-arrow');
+  if (datesDiv.style.display !== 'none') {
+    datesDiv.style.display = 'none';
+    card.classList.remove('open');
+    if (arrow) arrow.textContent = '▼';
+    return;
+  }
+  const dates = getNextNDates(hebDay, 6);
+  datesDiv.innerHTML = dates.map(d => {
+    const ds = dateToStr(d);
+    const label = `${HEB_DAY_SHORT[hebDay] || ''} · ${fmtDate(d)}`;
+    const href = custId ? `/store/${custId}?date=${ds}` : `/dashboard?date=${ds}`;
+    return `<a class="mycust-date-btn" href="${href}" onclick="closeMyCust()">${label}</a>`;
+  }).join('');
+  datesDiv.style.display = 'flex';
+  card.classList.add('open');
+  if (arrow) arrow.textContent = '▲';
+}
+
+function renderMyCust(customers) {
+  const body = document.getElementById('mycustBody');
+  if (!customers || customers.length === 0) {
+    body.innerHTML = '<div class="mycust-empty">לא נמצאו לקוחות</div>';
+    return;
+  }
+  const dayOrder = ['א','ב','ג','ד','ה','ו','ש'];
+  const groups = {};
+  customers.forEach(c => {
+    // fallback: assigned_visit_day → visit_day → '?'
+    const d = (c.assigned_visit_day || c.visit_day || '').trim() || '?';
+    // normalize to single letter if needed
+    const key = (d.length === 1 && HEB_TO_JSDAY[d] !== undefined) ? d : '?';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push({...c, _dayKey: key});
+  });
+  let html = '';
+  dayOrder.forEach(hd => {
+    if (!groups[hd]) return;
+    const dayLabel = HEB_DAY_FULL[hd] || hd;
+    html += `<div class="mycust-day-group">
+      <div class="mycust-day-label">📅 יום ${dayLabel} (${groups[hd].length} לקוחות)</div>`;
+    groups[hd].forEach(c => {
+      html += `
+        <div class="mycust-card" onclick="toggleCustDates(this,'${hd}',${c.id})">
+          <div class="mycust-card-info">
+            <div class="mycust-card-name">${c.name}</div>
+            <div class="mycust-card-meta">${c.city || ''}${c.region ? ' · ' + c.region : ''}</div>
+          </div>
+          <div class="mycust-card-arrow">▼</div>
+        </div>
+        <div class="mycust-dates"></div>`;
+    });
+    html += '</div>';
+  });
+  if (groups['?']) {
+    html += `<div class="mycust-day-group"><div class="mycust-day-label">❓ יום ביקור לא מוגדר (${groups['?'].length} לקוחות)</div>`;
+    groups['?'].forEach(c => {
+      html += `
+        <div class="mycust-card" onclick="showNoDayMsg(this)">
+          <div class="mycust-card-info">
+            <div class="mycust-card-name">${c.name}</div>
+            <div class="mycust-card-meta">${c.city || ''}${c.region ? ' · ' + c.region : ''}</div>
+          </div>
+          <div class="mycust-card-arrow">▼</div>
+        </div>
+        <div class="mycust-dates"></div>`;
+    });
+    html += '</div>';
+  }
+  body.innerHTML = html;
+}
+
+function showNoDayMsg(card) {
+  const datesDiv = card.nextElementSibling;
+  const arrow = card.querySelector('.mycust-card-arrow');
+  if (datesDiv.style.display !== 'none') {
+    datesDiv.style.display = 'none';
+    card.classList.remove('open');
+    if (arrow) arrow.textContent = '▼';
+    return;
+  }
+  datesDiv.innerHTML = '<div style="padding:10px;color:#64748b;font-size:13px;text-align:center">יום ביקור לא מוגדר ללקוח זה</div>';
+  datesDiv.style.display = 'flex';
+  card.classList.add('open');
+  if (arrow) arrow.textContent = '▲';
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+function updateChatBadge(count) {
+  const btn   = document.getElementById('chat-btn');
+  const badge = document.getElementById('agent-chat-badge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count;
+    badge.style.display = 'inline-block';
+    if (btn) { btn.style.background = '#fef2f2'; btn.style.color = '#dc2626'; btn.style.borderColor = '#fecaca'; }
+  } else {
+    badge.style.display = 'none';
+    if (btn) { btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = ''; }
+  }
+}
+
+let _prevAgentUnread = -1;
+async function pollAgentUnread() {
+  try {
+    const res = await fetch('/api/agent-unread-count');
+    const data = await res.json();
+    const count = data.count || 0;
+    updateChatBadge(count);
+    _prevAgentUnread = count;
+  } catch(e) {}
+}
+
+{% if not manager_view %}
+pollAgentUnread();
+setInterval(pollAgentUnread, 5000);
+
+// טוען את רשימת הלקוחות ברקע ומעדכן את הכפתור עם הספירה
+(async function loadCustCount() {
+  try {
+    const res  = await fetch('/api/my-customers');
+    const data = await res.json();
+    _mycustAll = data.customers || [];
+    const count = _mycustAll.length;
+    const btn = document.querySelector('.header-action-btn[onclick="openMyCust()"]');
+    if (btn && count > 0) {
+      btn.innerHTML = `👥 הלקוחות שלי <span style="background:white;color:var(--primary);border-radius:12px;padding:1px 8px;font-size:12px;font-weight:800;margin-right:4px">${count}</span>`;
+    }
+  } catch(e) {}
+})();
+{% endif %}
+
+function openGeneralChat() {
+  document.getElementById('generalChatModal').classList.add('open');
+  loadGeneralChat(true);
+  setTimeout(() => document.getElementById('generalChatInput').focus(), 200);
+}
+function closeGeneralChat() { document.getElementById('generalChatModal').classList.remove('open'); }
+
+async function deleteAllChat() {
+  if (!confirm('למחוק את כל ההודעות בצ\'אט?')) return;
+  await fetch('/api/general-chat/clear', { method: 'DELETE' });
+  loadGeneralChat();
+}
+
+async function loadGeneralChat(markRead) {
+  try {
+    const url = markRead ? '/api/general-chat?mark_read=1' : '/api/general-chat';
+    if (markRead) updateChatBadge(0);
+    const res = await fetch(url);
+    const data = await res.json();
+    const list = document.getElementById('generalChatList');
+    if (!data.comments) { list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px">שגיאה</div>'; return; }
+    const clearedAt = localStorage.getItem(AGENT_CLEAR_KEY);
+    const comments = clearedAt ? data.comments.filter(c => c.created_at > clearedAt) : data.comments;
+    if (!comments.length) { list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:14px">אין הודעות עדיין!</div>'; return; }
+    list.innerHTML = comments.map(c => {
+      const isMine = c.user_name === '{{ user.name }}';
+      const isMgr  = c.user_role === 'manager';
+      const side   = isMine ? 'mine' : 'theirs';
+      const color  = isMgr  ? 'manager-msg' : 'agent-msg';
+      return `<div class="gchat-row">
+        <div class="chat-msg ${color} ${side}">
+          <div class="chat-bubble-name">${c.user_name}</div>
+          <div>${c.message}</div>
+          <div class="chat-meta">${c.created_at.slice(11,16)}</div>
+        </div>
+      </div>`;
+    }).join('');
+    list.scrollTop = list.scrollHeight;
+  } catch(e) {}
+}
+
+async function sendGeneralChat() {
+  const input = document.getElementById('generalChatInput');
+  const message = input.value.trim();
+  if (!message) return;
+  input.value = '';
+  const res = await fetch('/api/general-chat', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message}) });
+  if ((await res.json()).status === 'ok') await loadGeneralChat();
+}
+
+setInterval(() => {
+  if (document.getElementById('generalChatModal').classList.contains('open')) loadGeneralChat();
+}, 10000);
+
+function filterStores(type) {
+  document.querySelectorAll('.stat-card').forEach(s => s.classList.remove('active'));
+  document.getElementById('stat-' + (type==='all'?'all':type==='visited'?'visited':'remaining')).classList.add('active');
+  document.querySelectorAll('.store-card').forEach(card => {
+    const isDone = card.classList.contains('status-done');
+    const isIn   = card.classList.contains('status-in');
+    const isNone = card.classList.contains('status-none');
+    const isMissed = card.classList.contains('status-missed');
+    let show = true;
+    if (type==='visited')   show = isDone;
+    if (type==='remaining') show = isNone || isMissed || isIn;
+    card.style.display = show ? '' : 'none';
+  });
+  const first = document.querySelector('.store-card:not([style*="none"])');
+  if (first) first.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+async function resetDay(agentId) {
+  if (!confirm('לאפס את כל הביקורים ביום זה?')) return;
+  const body = {visit_date: VISIT_DATE};
+  if (agentId) body.agent_id = agentId;
+  const res = await fetch('/api/reset-day', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  const data = await res.json();
+  if (data.status === 'ok') { showToastAgent('🗑️ הביקורים אופסו'); setTimeout(() => location.reload(), 800); }
+  else showToastAgent('❌ שגיאה: ' + (data.error || 'לא ידוע'));
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+{% if manager_view %}
+let searchTimer = null;
+const AGENT_VIEW_ID = {{ viewed_agent.id }};
+async function searchCustomers(q) {
+  const dd = document.getElementById('searchDropdown');
+  if (q.length < 2) { dd.classList.remove('open'); return; }
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`/api/customers/search?q=${encodeURIComponent(q)}`);
+      const items = await res.json();
+      if (!items.length) {
+        dd.innerHTML = '<div class="search-empty">לא נמצאו לקוחות</div>';
+      } else {
+        dd.innerHTML = items.map(c => `
+          <div class="search-item">
+            <div style="flex:1;min-width:0;cursor:pointer" onclick="goToCustomer(${c.id},'${escHtml(c.name)}')">
+              <div class="search-item-name">${escHtml(c.name)}</div>
+              <div class="search-item-meta">${escHtml(c.city)} · <span class="search-item-agent">${escHtml(c.agent)}</span></div>
+            </div>
+            <button class="hist-btn" onclick="event.stopPropagation();openHist(${c.id},'${escHtml(c.name)}')">📋 היסטוריית ביקורים</button>
+          </div>`).join('');
+      }
+      dd.classList.add('open');
+    } catch(e) {}
+  }, 300);
+}
+function goToCustomer(id, name) {
+  document.getElementById('customerSearch').value = name;
+  document.getElementById('searchDropdown').classList.remove('open');
+  window.location.href = `/store/${id}?date=${VISIT_DATE}&agent_id=${AGENT_VIEW_ID}`;
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) document.getElementById('searchDropdown').classList.remove('open');
+});
+{% endif %}
+
+async function openHist(customerId, customerName) {
+  if (document.getElementById('searchDropdown')) document.getElementById('searchDropdown').classList.remove('open');
+  document.getElementById('histTitle').textContent = '📋 היסטוריית ביקורים — ' + customerName;
+  document.getElementById('histBody').innerHTML = '<div class="hist-empty">טוען...</div>';
+  document.getElementById('histOverlay').classList.add('open');
+  try {
+    const res = await fetch(`/api/customer-history/${customerId}`);
+    const data = await res.json();
+    renderHist(data);
+  } catch(e) {
+    document.getElementById('histBody').innerHTML = '<div class="hist-empty">שגיאה בטעינה</div>';
+  }
+}
+
+function renderHist(data) {
+  const body = document.getElementById('histBody');
+  if (!data.visits || !data.visits.length) {
+    body.innerHTML = '<div class="hist-empty">אין היסטוריית ביקורים ללקוח זה</div>'; return;
+  }
+  body.innerHTML = data.visits.map(v => {
+    const comments = v.comments.map(c => `
+      <div class="hist-comment ${c.role==='manager'?'mgr':'agent'}">
+        <div>${escHtml(c.msg)}</div>
+        <div class="hist-comment-meta">${escHtml(c.user)} · ${escHtml(c.time)}</div>
+      </div>`).join('');
+    return `<div class="hist-visit">
+      <div class="hist-visit-header">
+        <div class="hist-date">📅 ${v.date}</div>
+        <span class="hist-agent-badge">${escHtml(v.agent_name)}</span>
+      </div>
+      <div class="hist-meta">
+        ${v.check_in  ? `<span>🟢 כניסה: ${v.check_in}</span>`  : ''}
+        ${v.check_out ? `<span>🔴 יציאה: ${v.check_out}</span>` : ''}
+        ${v.duration  ? `<span>⏱️ ${v.duration} דק'</span>`      : ''}
+      </div>
+      ${v.notes ? `<div class="hist-notes">📝 ${escHtml(v.notes)}</div>` : ''}
+      ${comments ? `<div style="margin-top:6px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:700">💬 תגובות:</div>${comments}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+function closeHist() { document.getElementById('histOverlay').classList.remove('open'); }
+
+function openEilatPanel() {
+  const el = document.getElementById('eilatOverlay');
+  if (el) el.classList.add('open');
+}
+function closeEilat() {
+  const el = document.getElementById('eilatOverlay');
+  if (el) el.classList.remove('open');
+}
+</script>
+
+<div id="maintenance-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(6,13,31,.95);backdrop-filter:blur(8px);align-items:center;justify-content:center;text-align:center;padding:24px;font-family:'Segoe UI',sans-serif;color:#f1f5f9;direction:rtl">
+  <div style="background:rgba(255,255,255,.07);border:1px solid rgba(245,158,11,.4);border-radius:24px;padding:40px 32px;max-width:360px;width:100%;box-shadow:0 0 40px rgba(245,158,11,.15)">
+    <div style="font-size:52px;margin-bottom:18px">🔧</div>
+    <div style="font-size:22px;font-weight:700;margin-bottom:10px">האפליקציה בעדכון</div>
+    <div style="font-size:15px;color:rgba(241,245,249,.6);line-height:1.6">אנחנו מבצעים שדרוג קצר.<br>נא להמתין כמה דקות.</div>
+    <div style="width:36px;height:36px;border:3px solid rgba(245,158,11,.2);border-top-color:#f59e0b;border-radius:50%;animation:spin 1s linear infinite;margin:20px auto 0"></div>
+  </div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+<script>
+setInterval(async () => {
+  try {
+    const r = await fetch('/api/maintenance-status');
+    const d = await r.json();
+    const el = document.getElementById('maintenance-overlay');
+    el.style.display = d.maintenance ? 'flex' : 'none';
+  } catch(e) {}
+}, 5000);
+</script>
+</body>
+</html>

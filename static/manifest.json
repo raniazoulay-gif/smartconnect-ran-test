@@ -1,0 +1,26 @@
+{
+  "name": "UNICO — ניהול סוכנים",
+  "short_name": "UNICO",
+  "description": "מערכת ניהול לקוחות וסוכנים",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#00327d",
+  "theme_color": "#00327d",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/static/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

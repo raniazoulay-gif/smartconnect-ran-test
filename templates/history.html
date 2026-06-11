@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/static/manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="{{ cfg.company_name }}">
+<link rel="apple-touch-icon" href="/static/logo.png">
+<meta name="theme-color" content="#00327d">
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js')}</script>
+<title>היסטוריית ביקורים — {{ cfg.company_name }}</title>
+<style>
+:root {
+  --bg:#eef1f8; --bg2:#ffffff;
+  --card:#ffffff; --border:#dde3ef; --border-h:#b8c5e0;
+  --text:#1a1f36; --muted:#64748b;
+  --primary:{{ cfg.primary_color }}; --primary2:{{ cfg.secondary_color }};
+  --success:#16a34a; --warning:#d97706; --danger:#dc2626;
+  --r:16px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',system-ui,Arial,sans-serif; background:var(--bg); color:var(--text); direction:rtl; min-height:100vh; padding-bottom:30px; }
+
+.app-header { background:var(--primary); padding:0 0 14px; }
+.header-top { display:flex; justify-content:space-between; align-items:center; padding:14px 20px 10px; }
+.header-logo-text { font-size:22px; font-weight:900; letter-spacing:2px; color:white; }
+.header-center { flex:1; text-align:center; }
+.header-title { font-size:18px; font-weight:700; color:white; }
+.header-sub { font-size:12px; color:rgba(255,255,255,0.7); margin-top:2px; }
+.logout-btn { background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); color:rgba(255,255,255,0.9); border-radius:8px; padding:7px 14px; font-size:13px; text-decoration:none; }
+.back-btn { display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); color:white; border-radius:8px; padding:7px 14px; font-size:13px; text-decoration:none; margin:0 20px 14px; }
+
+/* Search filters bar */
+.search-bar { background:var(--bg2); border-bottom:1px solid var(--border); padding:12px 16px; display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; }
+.filter-group { display:flex; flex-direction:column; gap:4px; }
+.filter-group label { font-size:11px; font-weight:600; color:var(--muted); }
+.filter-group select, .filter-group input { border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:13px; background:white; color:var(--text); font-family:inherit; }
+.filter-btn { background:var(--primary); color:white; border:none; border-radius:8px; padding:9px 18px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; align-self:flex-end; }
+.filter-btn:hover { background:var(--primary2); }
+.clear-btn { background:#f1f5f9; color:var(--muted); border:1px solid var(--border); border-radius:8px; padding:9px 14px; font-size:13px; cursor:pointer; font-family:inherit; align-self:flex-end; }
+.clear-btn:hover { background:var(--border); }
+
+.content { padding:16px; }
+.results-bar { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.results-count { font-size:12px; color:var(--muted); font-weight:600; }
+.active-filters { display:flex; flex-wrap:wrap; gap:6px; }
+.filter-chip { background:#e0e7ff; color:var(--primary); border-radius:20px; padding:3px 10px; font-size:11px; font-weight:600; display:flex; align-items:center; gap:4px; cursor:pointer; }
+.filter-chip:hover { background:#c7d2fe; }
+
+/* Table */
+.table-wrap { overflow-x:auto; border-radius:var(--r); box-shadow:0 1px 4px rgba(0,50,125,0.06); }
+.visit-table { width:100%; border-collapse:collapse; background:var(--card); min-width:700px; }
+
+/* Excel-like column headers */
+.visit-table th {
+  background:var(--primary);
+  color:white;
+  padding:0;
+  font-size:12px;
+  font-weight:700;
+  text-align:right;
+  position:relative;
+  white-space:nowrap;
+}
+.th-inner {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 12px;
+  gap:6px;
+  cursor:pointer;
+  user-select:none;
+}
+.th-inner:hover { background:rgba(255,255,255,0.1); }
+.th-label { flex:1; }
+.th-arrow {
+  font-size:10px;
+  opacity:0.7;
+  transition:transform 0.2s;
+  flex-shrink:0;
+}
+.th-arrow.filtered { opacity:1; color:#fbbf24; }
+
+/* Dropdown filter panel */
+.col-dropdown {
+  display:none;
+  position:absolute;
+  top:100%;
+  right:0;
+  z-index:200;
+  background:white;
+  border:1px solid var(--border-h);
+  border-radius:10px;
+  box-shadow:0 8px 24px rgba(0,50,125,0.15);
+  min-width:200px;
+  max-width:280px;
+  padding:10px;
+  color:var(--text);
+  direction:rtl;
+}
+.col-dropdown.open { display:block; }
+.dd-search { width:100%; border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:12px; margin-bottom:8px; font-family:inherit; }
+.dd-list { max-height:200px; overflow-y:auto; display:flex; flex-direction:column; gap:3px; }
+.dd-item { display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:5px; cursor:pointer; font-size:12px; }
+.dd-item:hover { background:#f0f5ff; }
+.dd-item input[type=checkbox] { width:14px; height:14px; accent-color:var(--primary); flex-shrink:0; }
+.dd-actions { display:flex; gap:6px; margin-top:8px; border-top:1px solid var(--border); padding-top:8px; }
+.dd-btn { flex:1; padding:5px; border:none; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; }
+.dd-btn-apply { background:var(--primary); color:white; }
+.dd-btn-clear { background:#f1f5f9; color:var(--muted); }
+
+.visit-table td { padding:10px 12px; font-size:13px; border-bottom:1px solid var(--border); }
+.visit-table tr:last-child td { border-bottom:none; }
+.visit-table tbody tr:hover td { background:#f0f5ff; }
+.badge-done { background:#dcfce7; color:#16a34a; border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; }
+.badge-partial { background:#fef3c7; color:#d97706; border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; }
+.empty-state { text-align:center; padding:60px 20px; color:var(--muted); background:white; border-radius:var(--r); }
+.empty-state .icon { font-size:48px; margin-bottom:12px; }
+
+@media(max-width:600px){
+  .search-bar { flex-direction:column; }
+  .col-city,.col-region { display:none; }
+}
+</style>
+</head>
+<body>
+<div class="app-header">
+  <div class="header-top">
+    <div class="header-logo-text">{{ cfg.company_name }}</div>
+    <div class="header-center">
+      <div class="header-title">היסטוריית ביקורים</div>
+      <div class="header-sub">{{ user.name }}</div>
+    </div>
+    <a href="/logout" class="logout-btn">יציאה</a>
+  </div>
+  <a href="/manager" class="back-btn">← חזרה לדשבורד</a>
+</div>
+
+<!-- Search bar -->
+<div class="search-bar">
+  <div class="filter-group">
+    <label>סוכן</label>
+    <select id="f-agent">
+      <option value="all">כולם</option>
+      {% for a in agents %}
+      <option value="{{ a.id }}">{{ a.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>מתאריך</label>
+    <input type="date" id="f-from" value="{{ (today - timedelta(days=30)).strftime('%Y-%m-%d') }}">
+  </div>
+  <div class="filter-group">
+    <label>עד תאריך</label>
+    <input type="date" id="f-to" value="{{ today.strftime('%Y-%m-%d') }}">
+  </div>
+  <div class="filter-group">
+    <label>שם לקוח</label>
+    <input type="text" id="f-customer" placeholder="חפש...">
+  </div>
+  <button class="filter-btn" onclick="loadHistory()">🔍 חפש</button>
+  <button class="clear-btn" onclick="clearColFilters()">נקה פילטרים</button>
+</div>
+
+<div class="content">
+  <div class="results-bar">
+    <div class="results-count" id="results-count"></div>
+    <div class="active-filters" id="active-filters"></div>
+  </div>
+  <div id="table-wrap"></div>
+</div>
+
+<script>
+// ─── Security: escapes HTML special chars before inserting into innerHTML ──
+function escapeHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ─── State ────────────────────────────────────────────────────────────────
+let allData    = [];
+let colFilters = {}; // { colKey: Set of selected values }
+
+const COLS = [
+  { key:'date',          label:'תאריך',   cls:'' },
+  { key:'agent_name',    label:'סוכן',    cls:'' },
+  { key:'customer_name', label:'לקוח',    cls:'' },
+  { key:'city',          label:'עיר',     cls:'col-city' },
+  { key:'region',        label:'אזור',    cls:'col-region' },
+  { key:'check_in',      label:'כניסה',   cls:'' },
+  { key:'check_out',     label:'יציאה',   cls:'' },
+  { key:'duration',      label:'משך',     cls:'' },
+  { key:'status',        label:'סטטוס',   cls:'' },
+];
+
+// ─── Load from server ─────────────────────────────────────────────────────
+async function loadHistory() {
+  const agent    = document.getElementById('f-agent').value;
+  const from     = document.getElementById('f-from').value;
+  const to       = document.getElementById('f-to').value;
+  const customer = document.getElementById('f-customer').value;
+
+  const params = new URLSearchParams({ agent_id: agent, date_from: from, date_to: to, customer_q: customer });
+  try {
+    const res = await fetch('/api/history/visits?' + params);
+    if (!res.ok) throw new Error('שגיאת שרת ' + res.status);
+    allData = await res.json();
+  } catch (err) {
+    document.getElementById('table-wrap').innerHTML =
+      `<div class="empty-state"><div class="icon">⚠️</div><div>שגיאה בטעינת נתונים: ${escapeHtml(err.message)}</div></div>`;
+    return;
+  }
+
+  // Enrich with status field
+  allData.forEach(v => {
+    v.status = v.check_out ? 'הושלם' : 'פתוח';
+  });
+
+  colFilters = {};
+  renderTable();
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────
+function getFilteredData() {
+  return allData.filter(v => {
+    for (const [key, selected] of Object.entries(colFilters)) {
+      if (!selected || selected.size === 0) continue;
+      const val = String(v[key] ?? '—');
+      if (!selected.has(val)) return false;
+    }
+    return true;
+  });
+}
+
+function renderTable() {
+  const data  = getFilteredData();
+  const count = document.getElementById('results-count');
+  const wrap  = document.getElementById('table-wrap');
+
+  count.textContent = `נמצאו ${data.length} ביקורים${allData.length !== data.length ? ` (מתוך ${allData.length})` : ''}`;
+  renderActiveFilters();
+
+  if (!allData.length) {
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">📋</div><div>לא נמצאו ביקורים</div></div>';
+    return;
+  }
+
+  // Build header
+  let thead = '<thead><tr>';
+  COLS.forEach(col => {
+    const isFiltered = colFilters[col.key] && colFilters[col.key].size > 0;
+    thead += `<th class="${col.cls}">
+      <div class="th-inner" onclick="toggleDropdown('${col.key}')">
+        <span class="th-label">${col.label}</span>
+        <span class="th-arrow ${isFiltered ? 'filtered' : ''}">▼</span>
+      </div>
+      <div class="col-dropdown" id="dd-${col.key}">
+        <input class="dd-search" placeholder="חפש..." oninput="filterDdList('${col.key}', this.value)">
+        <div class="dd-list" id="ddlist-${col.key}"></div>
+        <div class="dd-actions">
+          <button type="button" class="dd-btn dd-btn-apply" onclick="applyColFilter('${col.key}')">החל</button>
+          <button type="button" class="dd-btn dd-btn-clear" onclick="clearColFilter('${col.key}')">נקה</button>
+        </div>
+      </div>
+    </th>`;
+  });
+  thead += '</tr></thead>';
+
+  // Build rows
+  let tbody = '<tbody>';
+  if (!data.length) {
+    tbody += `<tr><td colspan="${COLS.length}" style="text-align:center;padding:40px;color:var(--muted)">אין תוצאות לפילטר הנוכחי</td></tr>`;
+  } else {
+    data.forEach(v => {
+      const dur    = v.duration ? `${escapeHtml(v.duration)} דק'` : '—';
+      const status = v.check_out
+        ? '<span class="badge-done">הושלם</span>'
+        : '<span class="badge-partial">פתוח</span>';
+      tbody += `<tr>
+        <td>${escapeHtml(v.date)}</td>
+        <td>${escapeHtml(v.agent_name)}</td>
+        <td><strong>${escapeHtml(v.customer_name)}</strong></td>
+        <td class="col-city">${escapeHtml(v.city) || '—'}</td>
+        <td class="col-region">${escapeHtml(v.region) || '—'}</td>
+        <td>${escapeHtml(v.check_in) || '—'}</td>
+        <td>${escapeHtml(v.check_out) || '—'}</td>
+        <td>${dur}</td>
+        <td>${status}</td>
+      </tr>`;
+    });
+  }
+  tbody += '</tbody>';
+
+  wrap.innerHTML = `<div class="table-wrap"><table class="visit-table">${thead}${tbody}</table></div>`;
+}
+
+// ─── Column dropdown ──────────────────────────────────────────────────────
+let openDropdown = null;
+
+function toggleDropdown(colKey) {
+  // Close if clicking same
+  const dd = document.getElementById('dd-' + colKey);
+  if (openDropdown && openDropdown !== dd) {
+    openDropdown.classList.remove('open');
+  }
+  if (dd.classList.contains('open')) {
+    dd.classList.remove('open');
+    openDropdown = null;
+    return;
+  }
+  populateDdList(colKey, '');
+  dd.classList.add('open');
+  openDropdown = dd;
+  dd.querySelector('.dd-search').value = '';
+  dd.querySelector('.dd-search').focus();
+}
+
+document.addEventListener('click', e => {
+  if (openDropdown && !e.target.closest('th')) {
+    openDropdown.classList.remove('open');
+    openDropdown = null;
+  }
+});
+
+function getUnique(colKey) {
+  const vals = allData.map(v => String(v[colKey] ?? '—'));
+  return [...new Set(vals)].sort((a,b) => a.localeCompare(b, 'he'));
+}
+
+function populateDdList(colKey, search) {
+  const list     = document.getElementById('ddlist-' + colKey);
+  const selected = colFilters[colKey] || new Set();
+  const unique   = getUnique(colKey).filter(v => !search || v.includes(search));
+
+  const allChecked = unique.every(v => selected.size === 0 || selected.has(v));
+
+  let html = `<label class="dd-item">
+    <input type="checkbox" ${allChecked ? 'checked' : ''} onchange="toggleAll('${colKey}', this.checked)">
+    <span><strong>בחר הכל</strong></span>
+  </label>`;
+
+  unique.forEach(val => {
+    const checked = selected.size === 0 || selected.has(val);
+    const safe = escapeHtml(val);
+    html += `<label class="dd-item">
+      <input type="checkbox" value="${safe}" ${checked ? 'checked' : ''} data-col="${colKey}">
+      <span>${safe}</span>
+    </label>`;
+  });
+
+  list.innerHTML = html;
+}
+
+function filterDdList(colKey, search) {
+  populateDdList(colKey, search);
+}
+
+function toggleAll(colKey, checked) {
+  const list = document.getElementById('ddlist-' + colKey);
+  list.querySelectorAll('input[data-col]').forEach(cb => cb.checked = checked);
+}
+
+function applyColFilter(colKey) {
+  const list     = document.getElementById('ddlist-' + colKey);
+  const checkboxes = [...list.querySelectorAll('input[data-col]')];
+  const allVals  = checkboxes.map(cb => cb.value);
+  const checked  = checkboxes.filter(cb => cb.checked).map(cb => cb.value);
+
+  if (checked.length === allVals.length || checked.length === 0) {
+    delete colFilters[colKey];
+  } else {
+    colFilters[colKey] = new Set(checked);
+  }
+
+  if (openDropdown) { openDropdown.classList.remove('open'); openDropdown = null; }
+  renderTable();
+}
+
+function clearColFilter(colKey) {
+  delete colFilters[colKey];
+  if (openDropdown) { openDropdown.classList.remove('open'); openDropdown = null; }
+  renderTable();
+}
+
+function clearColFilters() {
+  colFilters = {};
+  renderTable();
+}
+
+// ─── Active filter chips ──────────────────────────────────────────────────
+function renderActiveFilters() {
+  const wrap = document.getElementById('active-filters');
+  let html = '';
+  for (const [key, vals] of Object.entries(colFilters)) {
+    if (!vals || vals.size === 0) continue;
+    const col = COLS.find(c => c.key === key);
+    const label = col ? col.label : key;
+    const preview = [...vals].slice(0,2).map(escapeHtml).join(', ') + (vals.size > 2 ? ` +${vals.size-2}` : '');
+    html += `<div class="filter-chip" onclick="clearColFilter('${escapeHtml(key)}')">
+      ${escapeHtml(label)}: ${preview} ✕
+    </div>`;
+  }
+  wrap.innerHTML = html;
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+loadHistory();
+</script>
+</body>
+</html>

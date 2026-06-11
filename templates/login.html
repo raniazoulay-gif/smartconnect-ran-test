@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/static/manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="{{ cfg.company_name }}">
+<link rel="apple-touch-icon" href="/static/logo.png">
+<meta name="theme-color" content="#00327d">
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js')}</script>
+<title>כניסה — {{ cfg.company_name }}</title>
+<style>
+:root {
+  --bg: #eef1f8;
+  --border: #dde3ef;
+  --text: #1a1f36;
+  --muted: #64748b;
+  --primary: {{ cfg.primary_color }};
+  --primary2: {{ cfg.secondary_color }};
+  --danger: #dc2626;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, Arial, sans-serif;
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0,50,125,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 110%, rgba(26,79,160,0.08) 0%, transparent 60%),
+    linear-gradient(180deg, #eef1f8 0%, #dde6f5 100%);
+  direction: rtl;
+}
+.login-wrap { width: 100%; max-width: 400px; text-align: center; }
+.login-logo { margin-bottom: 6px; }
+.login-logo img { height: 130px; width: auto; mix-blend-mode: multiply; }
+.login-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 36px 36px 44px;
+  width: 100%;
+  box-shadow: 0 4px 24px rgba(0,50,125,0.10), 0 1px 0 rgba(255,255,255,0.9);
+  text-align: center;
+}
+.logo-text { font-size: 30px; font-weight: 900; letter-spacing: 3px; color: var(--primary); }
+.logo-sub { font-size: 11px; color: var(--muted); letter-spacing: 4px; margin-top: 3px; }
+.login-title { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.login-sub { font-size: 14px; color: #1a1f36; font-weight: 700; margin-bottom: 32px; }
+.form-group { margin-bottom: 16px; text-align: right; }
+.form-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 7px; letter-spacing: 0.3px; }
+input[type=text], input[type=password] {
+  width: 100%;
+  background: #f8fafc;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 13px 16px;
+  font-size: 15px; color: var(--text); font-family: inherit;
+  text-align: right; direction: rtl;
+  transition: all 0.2s; outline: none;
+}
+input::placeholder { color: #94a3b8; }
+input:focus { border-color: var(--primary); background: #f0f5ff; box-shadow: 0 0 0 3px rgba(0,50,125,0.1); }
+.login-btn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--primary), var(--primary2));
+  color: white; border: none; border-radius: 12px;
+  padding: 14px; font-size: 16px; font-weight: 700;
+  cursor: pointer; margin-top: 8px; transition: all 0.2s;
+  box-shadow: 0 4px 20px rgba(0,50,125,0.3);
+  letter-spacing: 0.3px; font-family: inherit;
+}
+.login-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(0,50,125,0.4); }
+.error {
+  background: #fee2e2; border: 1px solid #fecaca;
+  color: #dc2626; border-radius: 10px; padding: 10px 14px;
+  font-size: 13px; margin-bottom: 16px;
+}
+
+/* Version badge — bottom left */
+.version-badge {
+  position: fixed;
+  bottom: 14px;
+  left: 16px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 1px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  direction: ltr;
+  user-select: none;
+  opacity: 0.7;
+}
+
+/* Developer credit — bottom right */
+.dev-credit {
+  position: fixed;
+  bottom: 16px; right: 16px;
+  opacity: 0.82;
+  transition: opacity 0.25s;
+  background: transparent;
+  text-align: center;
+}
+.dev-credit:hover { opacity: 1; }
+.dev-credit img {
+  height: 90px;
+  width: auto;
+  display: block;
+  margin-bottom: 2px;
+}
+.dev-credit-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  color: #2d3748;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  text-transform: uppercase;
+}
+</style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-logo">
+    <img src="/static/logo.png" alt="{{ cfg.company_name }}" onerror="this.style.display='none';document.querySelector('.logo-fallback').style.display='block'">
+    <div class="logo-fallback" style="display:none">
+      <div class="logo-text">{{ cfg.company_name }}</div>
+      <div class="logo-sub">{{ cfg.tagline }}</div>
+    </div>
+  </div>
+<div class="login-card">
+  <div class="login-title">{{ cfg.system_name }}</div>
+  <p class="login-sub">מערכת סוכני שטח</p>
+
+  {% if error %}
+  <div class="error">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="/login">
+    <div class="form-group">
+      <label class="form-label">שם משתמש</label>
+      <input type="text" name="username" placeholder="הכנס שם משתמש" required autofocus>
+    </div>
+    <div class="form-group">
+      <label class="form-label">סיסמה</label>
+      <input type="password" name="password" placeholder="הכנס סיסמה" required>
+    </div>
+    <button class="login-btn" type="submit">כניסה למערכת</button>
+  </form>
+</div>
+</div>
+
+<!-- Version badge — bottom left -->
+<div class="version-badge">BETA Ver 1.0.1</div>
+
+<!-- Developer credit — TotanRomi Smart Apps -->
+<div class="dev-credit">
+  <img src="/static/totan_logo.png" alt="TotanRomi Smart Apps">
+</div>
+
+<div id="maintenance-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(245,158,11,0.92);backdrop-filter:blur(4px);padding:10px 16px;text-align:center;font-family:'Segoe UI',sans-serif;color:#1a0a00;font-weight:700;font-size:14px;direction:rtl">
+  🔧 המערכת בעדכון — ניתן להתחבר, דפים פנימיים יחזרו עוד רגע
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+<script>
+setInterval(async () => {
+  try {
+    const r = await fetch('/api/maintenance-status');
+    const d = await r.json();
+    const el = document.getElementById('maintenance-banner');
+    el.style.display = d.maintenance ? 'block' : 'none';
+  } catch(e) {}
+}, 5000);
+</script>
+</body>
+</html>

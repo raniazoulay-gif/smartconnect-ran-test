@@ -1,0 +1,19 @@
+{
+  "company_name": "RAN TEST",
+  "tagline": "FIELD MANAGEMENT",
+  "system_name": "SMART CONNECT",
+  "primary_color": "#008071",
+  "secondary_color": "#369e1a",
+  "agent_label": "סוכן",
+  "agents_label": "סוכנים",
+  "store_label": "חנות",
+  "stores_label": "חנויות",
+  "manager_email": "raniazoulay@gmail.com",
+  "agents": [
+    {
+      "name": "RAN",
+      "username": "ran",
+      "password": "123456"
+    }
+  ]
+}

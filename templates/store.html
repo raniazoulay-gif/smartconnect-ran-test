@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/static/manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="{{ cfg.company_name }}">
+<link rel="apple-touch-icon" href="/static/logo.png">
+<meta name="theme-color" content="#00327d">
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js')}</script>
+<title>{{ customer.name }}</title>
+<style>
+:root {
+  --bg:#eef1f8; --bg2:#ffffff;
+  --card:#ffffff; --card-h:#f0f5ff;
+  --border:#dde3ef;
+  --text:#1a1f36; --muted:#64748b;
+  --primary:{{ cfg.primary_color }}; --primary2:{{ cfg.secondary_color }};
+  --mgr:#16a34a; --mgr2:#15803d;
+  --success:#16a34a; --warning:#d97706; --danger:#dc2626;
+  --r:16px; --r-sm:10px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',system-ui,Arial,sans-serif; background:var(--bg); color:var(--text); direction:rtl; min-height:100vh; padding-bottom:80px; }
+
+.header-bar { height:4px; }
+.header-bar.agent   { background:linear-gradient(90deg,var(--primary),var(--primary2)); }
+.header-bar.manager { background:linear-gradient(90deg,var(--primary),var(--primary2)); }
+
+.app-header { background:var(--primary); border-bottom:none; padding:14px 20px 16px; }
+.back-btn { display:inline-flex; align-items:center; gap:6px; color:rgba(255,255,255,0.85); text-decoration:none; font-size:14px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:6px 12px; margin-bottom:12px; transition:all 0.2s; }
+.back-btn:hover { background:rgba(255,255,255,0.25); color:white; }
+.manager-badge { display:inline-block; background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.35); color:white; border-radius:20px; padding:2px 10px; font-size:11px; font-weight:700; margin-bottom:6px; }
+.store-title { font-size:20px; font-weight:700; color:white; line-height:1.3; word-break:break-word; }
+.store-meta-line { font-size:13px; color:rgba(255,255,255,0.7); margin-top:4px; }
+
+.content { padding:16px; }
+
+.info-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:20px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,50,125,0.06); }
+.card-title { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px; }
+.info-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.info-label { font-size:11px; color:var(--muted); margin-bottom:3px; }
+.info-value { font-size:15px; font-weight:600; color:var(--text); }
+
+.time-row { display:flex; gap:10px; margin-bottom:14px; }
+.time-box { flex:1; background:#f8fafc; border:1px solid var(--border); border-radius:12px; padding:14px; text-align:center; }
+.time-lbl { font-size:11px; color:var(--muted); margin-bottom:4px; }
+.time-val { font-size:22px; font-weight:700; color:var(--text); }
+.time-val.empty { color:#cbd5e1; }
+
+.completed-msg { background:#dcfce7; border:1px solid #bbf7d0; color:#16a34a; border-radius:12px; padding:14px; text-align:center; font-weight:700; font-size:15px; margin-bottom:14px; }
+.checkin-active { background:#fffbeb; border:2px solid #fde68a; border-radius:12px; padding:14px; text-align:center; font-weight:700; color:#92400e; margin-bottom:14px; }
+.no-visit { background:#fef2f2; border:2px solid #fecaca; border-radius:12px; padding:14px; text-align:center; font-weight:700; color:#dc2626; }
+
+.duration-badge { background:#f0f5ff; border:1px solid #c7d2fe; color:var(--primary); border-radius:10px; padding:10px; font-weight:700; font-size:14px; text-align:center; margin-bottom:14px; }
+
+.action-btn { width:100%; padding:14px; border:none; border-radius:12px; font-size:15px; font-weight:700; cursor:pointer; margin-bottom:10px; transition:all 0.2s; font-family:inherit; }
+.btn-checkin  { background:linear-gradient(135deg,var(--success),#059669); color:white; box-shadow:0 4px 16px rgba(22,163,74,0.3); }
+.btn-checkout { background:linear-gradient(135deg,var(--primary),var(--primary2)); color:white; box-shadow:0 4px 16px rgba(0,50,125,0.3); }
+.btn-pause    { background:linear-gradient(135deg,#f59e0b,#d97706); color:white; box-shadow:0 4px 16px rgba(245,158,11,0.3); }
+.btn-resume   { background:linear-gradient(135deg,#10b981,#059669); color:white; box-shadow:0 4px 16px rgba(16,185,129,0.3); }
+.action-btn:hover { transform:translateY(-1px); filter:brightness(1.05); }
+.action-btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; filter:none; }
+.pause-status { background:#fffbeb; border:2px solid #fde68a; border-radius:12px; padding:12px 16px; text-align:center; font-size:14px; font-weight:700; color:#92400e; margin-bottom:12px; }
+.pause-badge  { background:#fef3c7; border:1px solid #fde68a; color:#d97706; border-radius:10px; padding:8px 14px; font-weight:700; font-size:13px; text-align:center; margin-bottom:10px; }
+
+.notes-label { font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; }
+.notes-section { background:#f8fafc; border:1.5px solid var(--border); border-radius:14px; padding:16px; margin-top:16px; }
+.notes-section:focus-within { border-color:var(--primary); background:#f0f5ff; }
+textarea { width:100%; padding:0; background:transparent; border:none; border-radius:0; font-size:14px; font-family:inherit; color:var(--text); resize:none; min-height:90px; text-align:right; direction:rtl; outline:none; line-height:1.6; }
+textarea::placeholder { color:#94a3b8; }
+.notes-footer { display:flex; align-items:center; justify-content:space-between; margin-top:12px; padding-top:10px; border-top:1px solid var(--border); }
+.notes-char-count { font-size:12px; color:#94a3b8; }
+.save-notes-btn { background:var(--primary); color:white; border:none; border-radius:10px; padding:12px 22px; font-size:15px; font-weight:700; cursor:pointer; transition:all 0.2s; font-family:inherit; }
+.save-notes-btn:hover { filter:brightness(1.1); transform:translateY(-1px); }
+.save-notes-btn.saved { background:var(--success); }
+
+.history-item { border-bottom:1px solid var(--border); padding:12px 0; }
+.history-item:last-child { border-bottom:none; }
+.history-date { font-size:13px; font-weight:700; color:var(--text); margin-bottom:4px; }
+.history-times { font-size:13px; color:var(--muted); margin-bottom:4px; }
+.history-notes { font-size:13px; color:var(--text); background:#f8fafc; padding:8px 12px; border-radius:8px; margin-top:4px; }
+.history-agent { font-size:11px; color:var(--muted); margin-top:4px; }
+
+/* Chat */
+.chat-messages { max-height:320px; overflow-y:auto; margin-bottom:14px; display:flex; flex-direction:column; gap:12px; background:white; border-radius:12px; padding:10px; }
+.chat-msg { max-width:78%; padding:10px 14px; border-radius:16px; font-size:14px; line-height:1.5; }
+.chat-msg.agent-msg   { background:#dbeafe; color:#1e3a8a; }
+.chat-msg.manager-msg { background:#dcfce7; color:#14532d; }
+.chat-msg.mine   { align-self:flex-start; border-bottom-right-radius:4px; }
+.chat-msg.theirs { align-self:flex-end;   border-bottom-left-radius:4px; }
+.chat-bubble-name { font-size:11px; font-weight:700; opacity:0.65; margin-bottom:3px; }
+.chat-meta { font-size:11px; opacity:0.6; margin-top:5px; }
+.chat-input-row { display:flex; gap:10px; }
+.chat-input { flex:1; padding:12px 14px; background:#f8fafc; border:1.5px solid var(--border); border-radius:12px; font-size:14px; font-family:inherit; color:var(--text); direction:rtl; text-align:right; outline:none; transition:all 0.2s; }
+.chat-input::placeholder { color:#94a3b8; }
+.chat-input:focus { border-color:var(--primary); background:#f0f5ff; }
+.chat-send { background:linear-gradient(135deg,var(--primary),var(--primary2)); color:white; border:none; border-radius:12px; padding:12px 18px; font-size:18px; cursor:pointer; }
+.chat-empty { text-align:center; color:var(--muted); padding:20px; font-size:14px; }
+
+.toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:white; border:1px solid var(--border); color:var(--text); padding:14px 20px; border-radius:14px; font-size:15px; font-weight:600; display:none; z-index:100; box-shadow:0 4px 16px rgba(0,50,125,0.12); width:90%; max-width:340px; text-align:center; }
+
+.bottom-bar { position:fixed; bottom:0; left:0; right:0; background:rgba(255,255,255,0.97); backdrop-filter:blur(12px); border-top:1px solid var(--border); padding:12px 16px 16px; display:flex; gap:8px; z-index:50; box-shadow:0 -2px 12px rgba(0,50,125,0.08); }
+.bar-btn { flex:1; padding:14px 8px; border:none; border-radius:var(--r-sm); font-size:15px; font-weight:700; cursor:pointer; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:5px; transition:all 0.2s; font-family:inherit; }
+.btn-primary { background:linear-gradient(135deg,var(--primary),var(--primary2)); color:white; box-shadow:0 4px 14px rgba(0,50,125,0.2); }
+.btn-ghost   { background:#f1f5f9; color:var(--text); border:1px solid var(--border); }
+.btn-cancel  { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+.btn-danger  { background:#fffbeb; color:#92400e; border:1px solid #fde68a; }
+.bar-btn:hover { opacity:0.9; transform:translateY(-1px); }
+.btn-phone { background:#f8fafc; color:#64748b; border:2px solid #e2e8f0; }
+.btn-phone.phone-active { background:linear-gradient(135deg,#f59e0b,#ea580c); color:white; border:none; box-shadow:0 4px 16px rgba(245,158,11,0.45); font-weight:800; }
+.phone-badge { background:#fff7ed; border:2px solid #fed7aa; color:#c2410c; border-radius:12px; padding:12px 16px; font-weight:700; font-size:15px; text-align:center; margin-bottom:12px; }
+.btn-meeting { background:linear-gradient(135deg,#16a34a,#15803d); color:white; }
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:300; align-items:center; justify-content:center; padding:20px; }
+.modal-overlay.open { display:flex; }
+.modal { background:#fff; border-radius:20px; padding:24px; width:100%; max-width:480px; box-shadow:0 12px 40px rgba(0,50,125,0.18); max-height:90vh; overflow-y:auto; }
+.modal h3 { font-size:17px; font-weight:700; color:var(--text); margin-bottom:16px; }
+.modal label { font-size:13px; color:var(--muted); display:block; margin-bottom:4px; }
+.modal input, .modal textarea { width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; font-family:inherit; box-sizing:border-box; }
+.modal textarea { resize:vertical; }
+.modal-btns { display:flex; gap:10px; margin-top:16px; }
+.modal-save { flex:2; background:linear-gradient(135deg,#16a34a,#15803d); color:white; border:none; border-radius:12px; padding:12px; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; }
+.modal-cancel { flex:1; background:#f1f5f9; color:#64748b; border:none; border-radius:12px; padding:12px; font-size:15px; cursor:pointer; font-family:inherit; }
+.email-tags-box { min-height:48px; border:1.5px solid var(--border); border-radius:10px; padding:6px 8px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; cursor:text; background:#fff; }
+.email-tags-box:focus-within { border-color:#00327d; }
+.email-tag { background:#e0e7ff; color:#3730a3; border-radius:20px; padding:4px 10px; font-size:13px; display:flex; align-items:center; gap:6px; white-space:nowrap; }
+.email-tag .remove-tag { cursor:pointer; font-size:15px; line-height:1; color:#6366f1; }
+.email-tag .remove-tag:hover { color:#dc2626; }
+.email-tag-input { border:none; outline:none; font-size:14px; font-family:inherit; min-width:180px; flex:1; padding:2px 4px; }
+</style>
+</head>
+<body>
+
+<div class="header-bar {% if is_manager %}manager{% else %}agent{% endif %}"></div>
+<div class="app-header">
+  <a href="{{ back_url }}" class="back-btn">← חזרה לרשימה</a>
+  {% if is_manager %}<div class="manager-badge">👁️ תצוגת מנהל</div>{% endif %}
+  <div class="store-title">{{ customer.name }}</div>
+  <div class="store-meta-line">{{ customer.city }}{% if customer.address %} — {{ customer.address }}{% endif %} | {{ customer.region }}</div>
+</div>
+
+{% if is_manager %}
+<div class="content">
+
+  <div class="info-card">
+    <div class="card-title">📊 סיכום ביקור — {{ visit_date }}</div>
+
+    {% if visit and visit.check_out_time %}
+    <div class="completed-msg">✅ הביקור הושלם</div>
+    {% if visit.is_phone %}<div class="phone-badge">📞 פגישה טלפונית</div>{% endif %}
+    <div class="time-row">
+      <div class="time-box"><div class="time-lbl">כניסה</div><div class="time-val">{{ visit.check_in_time[:5] }}</div></div>
+      <div class="time-box"><div class="time-lbl">יציאה</div><div class="time-val">{{ visit.check_out_time[:5] }}</div></div>
+    </div>
+    {% if visit.duration_minutes %}
+    <div class="duration-badge">⏱️ שהייה כוללת: {% if visit.duration_minutes >= 60 %}{{ visit.duration_minutes // 60 }}ש' {{ visit.duration_minutes % 60 }}ד'{% else %}{{ visit.duration_minutes }} דקות{% endif %}
+    {% if visit.pause_duration_minutes %} | ⏸ השהייה: {{ visit.pause_duration_minutes }} דקות | 🤝 פגישה נטו: {{ visit.duration_minutes - visit.pause_duration_minutes }} דקות{% endif %}
+    </div>
+    {% endif %}
+    {% if visit.notes %}
+    <div class="saved-notes">
+      <div class="card-title">📝 הערות הסוכן</div>
+      {{ visit.notes }}
+    </div>
+    {% endif %}
+
+    {% elif visit and visit.check_in_time %}
+    <div class="checkin-active">🟡 הסוכן נמצא כרגע בחנות — כניסה בשעה {{ visit.check_in_time[:5] }}
+    {% if visit.paused_at %}<br>⏸ כרגע בהשהייה מ-{{ visit.paused_at[:5] }}{% endif %}
+    </div>
+    {% if visit.is_phone %}<div class="phone-badge">📞 פגישה טלפונית</div>{% endif %}
+
+    {% else %}
+    <div class="no-visit">❌ הסוכן לא ביקר בחנות זו היום</div>
+    {% endif %}
+  </div>
+
+  {% if history %}
+  <div class="info-card">
+    <div class="card-title">📅 היסטוריית ביקורים</div>
+    {% for h in history %}
+    <div class="history-item">
+      <div class="history-date">{{ h.visit_date }} — {{ h.agent_name }}{% if h.is_phone %} <span style="background:#fed7aa;color:#c2410c;border-radius:6px;padding:2px 7px;font-size:12px;font-weight:700;margin-right:4px">📞 טלפוני</span>{% endif %}</div>
+      <div class="history-times">כניסה: {{ h.check_in_time[:5] if h.check_in_time else '—' }} | יציאה: {{ h.check_out_time[:5] if h.check_out_time else '—' }}{% if h.duration_minutes %} | ⏱ {% if h.duration_minutes >= 60 %}{{ h.duration_minutes // 60 }}ש' {{ h.duration_minutes % 60 }}ד'{% else %}{{ h.duration_minutes }}ד'{% endif %}{% endif %}</div>
+      {% if h.notes %}<div class="history-notes">{{ h.notes }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="info-card">
+    <div class="card-title">💬 תקשורת עם הסוכן</div>
+    <div class="chat-messages" id="chatMessages">
+      <div id="chatList"></div>
+      <div class="chat-empty" id="chatEmpty">טוען הודעות...</div>
+    </div>
+    <div class="chat-input-row">
+      <button class="chat-send" onclick="sendComment()">➤</button>
+      <input class="chat-input" id="chatInput" type="text" placeholder="כתוב הודעה לסוכן..." onkeydown="if(event.key==='Enter') sendComment()">
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+<div class="bottom-bar">
+  <a href="{{ back_url }}" class="bar-btn btn-ghost">◀ חזרה</a>
+  <button class="bar-btn btn-meeting" onclick="openMeetingModal()">📅 תיאום פגישה</button>
+  <button class="bar-btn btn-danger" onclick="resetVisit()">🔄 איפוס</button>
+</div>
+
+{% else %}
+<div class="content">
+
+  <div class="info-card">
+    <div class="card-title">פרטי חנות</div>
+    <div class="info-grid">
+      <div><div class="info-label">אזור</div><div class="info-value">{{ customer.region }}</div></div>
+      <div><div class="info-label">קוד לקוח</div><div class="info-value">{{ customer.card_code }}</div></div>
+      <div><div class="info-label">יום אספקה</div><div class="info-value">יום {{ customer.delivery_day }}</div></div>
+      <div><div class="info-label">יום ביקור</div><div class="info-value">יום {{ customer.assigned_visit_day or customer.visit_day }}</div></div>
+    </div>
+  </div>
+
+  <div class="info-card" style="margin-bottom:12px">
+    <div class="card-title">📋 ביקורים קודמים שלי{% if history %} ({{ history|length }}){% endif %}</div>
+    {% if history %}
+      {% for h in history %}
+      <div class="history-item">
+        <div class="history-date">{{ h.visit_date }}{% if h.is_phone %} 📞{% endif %}</div>
+        {% if h.notes %}
+          <div class="history-notes">{{ h.notes }}</div>
+        {% else %}
+          <div style="font-size:12px;color:#94a3b8;font-style:italic">ללא הערות</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="font-size:13px;color:#94a3b8;text-align:center;padding:12px 0">🕓 אין ביקורים קודמים בחנות זו</div>
+    {% endif %}
+  </div>
+
+  <div class="info-card">
+    <div class="card-title">ביקור — {{ visit_date }}</div>
+
+    {% if visit and visit.check_out_time %}
+    <div class="completed-msg">✅ הביקור הושלם!</div>
+    {% if visit.is_phone %}<div class="phone-badge">📞 פגישה טלפונית</div>{% endif %}
+    <div class="time-row">
+      <div class="time-box"><div class="time-lbl">כניסה</div><div class="time-val">{{ visit.check_in_time[:5] if visit.check_in_time else '—' }}</div></div>
+      <div class="time-box"><div class="time-lbl">יציאה</div><div class="time-val">{{ visit.check_out_time[:5] if visit.check_out_time else '—' }}</div></div>
+    </div>
+    {% if visit.duration_minutes %}
+    <div class="duration-badge">⏱️ שהייה: {% if visit.duration_minutes >= 60 %}{{ visit.duration_minutes // 60 }} שעות {{ visit.duration_minutes % 60 }} דקות{% else %}{{ visit.duration_minutes }} דקות{% endif %}</div>
+    {% endif %}
+    <button class="action-btn btn-phone {% if visit.is_phone %}phone-active{% endif %}" id="phoneBtn" onclick="togglePhone()" style="margin-top:10px">
+      {% if visit.is_phone %}✅ בוצעה שיחה טלפונית{% else %}📞 פגישה טלפונית{% endif %}
+    </button>
+
+    {% elif visit and visit.check_in_time %}
+    <div class="time-row">
+      <div class="time-box"><div class="time-lbl">כניסה</div><div class="time-val" style="color:var(--success)">{{ visit.check_in_time[:5] }}</div></div>
+      <div class="time-box"><div class="time-lbl">יציאה</div><div class="time-val empty">—</div></div>
+    </div>
+    {% if visit.is_phone %}<div class="phone-badge" style="margin-top:10px">📞 פגישה טלפונית</div>{% endif %}
+    <div style="margin-top:14px">
+      <button class="action-btn btn-checkout" style="margin-bottom:0" onclick="doCheckout()">📤 יציאה מהחנות</button>
+    </div>
+    <button class="action-btn btn-phone {% if visit.is_phone %}phone-active{% endif %}" id="phoneBtn" onclick="togglePhone()" style="margin-top:10px">
+      {% if visit.is_phone %}✅ בוצעה שיחה טלפונית{% else %}📞 פגישה טלפונית{% endif %}
+    </button>
+
+    {% else %}
+    <div class="time-row">
+      <div class="time-box"><div class="time-lbl">כניסה</div><div class="time-val empty">—</div></div>
+      <div class="time-box"><div class="time-lbl">יציאה</div><div class="time-val empty">—</div></div>
+    </div>
+    <button class="action-btn btn-checkin" onclick="doCheckin()">📥 כניסה לחנות</button>
+    <button class="action-btn btn-phone {% if visit and visit.is_phone %}phone-active{% endif %}" id="phoneBtn" onclick="togglePhone()" style="margin-top:10px">
+      {% if visit and visit.is_phone %}✅ בוצעה שיחה טלפונית{% else %}📞 בצע שיחה טלפונית{% endif %}
+    </button>
+
+    {% endif %}
+
+    <div class="notes-section">
+      <div class="notes-label">📝 מה עשיתי בחנות</div>
+      <textarea id="notesField" placeholder="תאר מה עשית בחנות, הזמנות, שיחות עם בעל החנות..." oninput="updateCharCount(this); markUnsaved()">{{ (visit.notes or '') if visit else '' }}</textarea>
+      <div class="notes-footer">
+        <span class="notes-char-count" id="charCount">{{ (visit.notes | length) if visit and visit.notes else 0 }} תווים</span>
+        <button class="save-notes-btn" id="saveNotesBtn" onclick="saveNotes()">{% if visit and visit.notes %}✅ נשמר{% else %}💾 שמור{% endif %}</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-card">
+    <div class="card-title">💬 שיחה עם המנהל</div>
+    <div class="chat-messages" id="chatMessages">
+      <div id="chatList"></div>
+      <div class="chat-empty" id="chatEmpty">טוען הודעות...</div>
+    </div>
+    <div class="chat-input-row">
+      <button class="chat-send" onclick="sendComment()">➤</button>
+      <input class="chat-input" id="chatInput" type="text" placeholder="כתוב הודעה..." onkeydown="if(event.key==='Enter') sendComment()">
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+<div class="bottom-bar">
+  <a href="{{ back_url }}" class="bar-btn btn-ghost">◀ חזרה</a>
+  <button class="bar-btn btn-cancel" onclick="cancelAction()">✖ בטל</button>
+  <button class="bar-btn btn-primary" id="saveAllBtn" onclick="saveAll()">💾 שמור</button>
+  <button class="bar-btn btn-danger" onclick="resetVisit()">🔄 איפוס</button>
+</div>
+{% endif %}
+
+<div class="modal-overlay" id="meetingModal">
+  <div class="modal">
+    <h3>📅 תיאום פגישת מנהל</h3>
+    <div style="margin-bottom:12px">
+      <label>נושא הפגישה</label>
+      <input id="meetingSubject" type="text" value="פגישת {{ cfg.company_name }} — {{ customer.name }}">
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:12px">
+      <div style="flex:1"><label>תאריך</label><input id="meetingDate" type="date"></div>
+      <div style="flex:1"><label>שעה</label>
+        <select id="meetingTime" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;background:#fff">
+          <option>07:00</option><option>07:30</option>
+          <option>08:00</option><option>08:30</option>
+          <option>09:00</option><option>09:30</option>
+          <option>10:00</option><option>10:30</option>
+          <option>11:00</option><option>11:30</option>
+          <option>12:00</option><option>12:30</option>
+          <option>13:00</option><option>13:30</option>
+          <option>14:00</option><option>14:30</option>
+          <option>15:00</option><option>15:30</option>
+          <option>16:00</option><option>16:30</option>
+          <option>17:00</option><option>17:30</option>
+          <option>18:00</option><option>18:30</option>
+          <option>19:00</option><option>19:30</option>
+          <option>20:00</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:12px">
+      <label>משך (דקות)</label>
+      <input id="meetingDuration" type="number" value="60" min="15" max="480">
+    </div>
+    <div style="margin-bottom:12px">
+      <label>משתתפים</label>
+      <div class="email-tags-box" id="emailTagsBox" onclick="document.getElementById('emailTagInput').focus()">
+        <input id="emailTagInput" class="email-tag-input"
+               placeholder="הוסף מייל ולחץ Enter"
+               type="email" autocomplete="email"
+               onkeydown="handleTagKey(event)"
+               onblur="tryAddTag()">
+      </div>
+    </div>
+    <div style="margin-bottom:4px">
+      <label>הערות (אופציונלי)</label>
+      <textarea id="meetingNotes" rows="2" placeholder="סדר יום, מיקום, הכנות..."></textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeMeetingModal()">✖ בטל</button>
+      <button class="modal-save" id="sendMeetingBtn" onclick="sendMeeting()">📨 שלח זימון</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CUSTOMER_ID = {{ customer.id }};
+const VISIT_DATE = '{{ visit_date }}';
+const MY_NAME = '{{ user.name }}';
+
+// אתחול כפתור שמור — ירוק אם כבר יש הערה שמורה
+(function() {
+  const btn = document.getElementById('saveNotesBtn');
+  if (btn && btn.textContent.includes('נשמר')) {
+    btn.style.background = '#16a34a';
+    btn.style.boxShadow = '0 4px 14px rgba(22,163,74,0.35)';
+  }
+})();
+const MY_ROLE = '{{ user.role }}';
+
+function showToast(msg, duration=2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', duration);
+}
+
+async function doCheckin() {
+  const btn = document.querySelector('.btn-checkin');
+  btn.disabled = true; btn.textContent = '⏳ רושם כניסה...';
+  const res = await fetch('/api/checkin', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({customer_id:CUSTOMER_ID, visit_date:VISIT_DATE}) });
+  const data = await res.json();
+  if (data.status === 'ok') {
+    showToast('✅ נכנסת לחנות בשעה ' + data.time.slice(0,5));
+    setTimeout(() => location.reload(), 1000);
+  } else if (data.open_customer_id) {
+    showOpenStoreToast(data.open_store_name, data.open_customer_id, data.visit_date);
+    btn.disabled = false; btn.textContent = '📥 כניסה לחנות';
+  } else {
+    showToast('❌ ' + data.error);
+    btn.disabled = false; btn.textContent = '📥 כניסה לחנות';
+  }
+}
+
+function showOpenStoreToast(storeName, customerId, visitDate) {
+  const t = document.getElementById('toast');
+  t.innerHTML = `<div style="margin-bottom:8px;font-size:14px">⚠️ יש ביקור פתוח בחנות:</div>
+    <a href="/store/${customerId}?date=${visitDate}" style="display:block;background:var(--primary);border-radius:8px;padding:10px 14px;color:white;text-decoration:none;font-size:15px;font-weight:700;text-align:center">
+      🏪 ${storeName}<br><span style="font-size:12px;opacity:0.8">לחץ כדי לעבור לחנות</span>
+    </a>`;
+  t.style.display = 'block'; t.style.cursor = 'pointer'; t.style.maxWidth = '320px';
+}
+
+async function doPause() {
+  const btn = document.querySelector('.btn-pause');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ מושהה...'; }
+  const res = await fetch('/api/pause', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({customer_id:CUSTOMER_ID, visit_date:VISIT_DATE}) });
+  const data = await res.json();
+  if (data.status === 'ok') {
+    showToast('⏸ הפגישה הושהתה בשעה ' + data.time.slice(0,5));
+    setTimeout(() => location.reload(), 800);
+  } else {
+    showToast('❌ ' + data.error);
+    if (btn) { btn.disabled = false; btn.textContent = '⏸ השהיית פגישה'; }
+  }
+}
+
+async function doResume() {
+  const btn = document.querySelector('.btn-resume');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ ממשיך...'; }
+  const res = await fetch('/api/resume', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({customer_id:CUSTOMER_ID, visit_date:VISIT_DATE}) });
+  const data = await res.json();
+  if (data.status === 'ok') {
+    showToast('▶ הפגישה חזרה — השהייה: ' + data.pause_minutes + ' דקות');
+    setTimeout(() => location.reload(), 800);
+  } else {
+    showToast('❌ ' + data.error);
+    if (btn) { btn.disabled = false; btn.textContent = '▶ המשך פגישה'; }
+  }
+}
+
+async function doCheckout() {
+  const notes = document.getElementById('notesField')?.value || '';
+  const btn = document.querySelector('.btn-checkout');
+  btn.disabled = true; btn.textContent = '⏳ רושם יציאה...';
+  const res = await fetch('/api/checkout', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({customer_id:CUSTOMER_ID, visit_date:VISIT_DATE, notes}) });
+  const data = await res.json();
+  if (data.status === 'ok') {
+    showToast('✅ יצאת מהחנות — שהייה ' + data.duration_str);
+    setTimeout(() => location.reload(), 1200);
+  } else {
+    showToast('❌ ' + data.error);
+    btn.disabled = false; btn.textContent = '📤 יציאה מהחנות';
+  }
+}
+
+async function loadComments() {
+  try {
+    const res = await fetch(`/api/comments?customer_id=${CUSTOMER_ID}&visit_date=${VISIT_DATE}`);
+    const data = await res.json();
+    const box = document.getElementById('chatMessages');
+    const list = document.getElementById('chatList');
+    const empty = document.getElementById('chatEmpty');
+    if (!data.comments || !data.comments.length) {
+      if (list) list.innerHTML = '';
+      if (empty) { empty.style.display=''; empty.textContent='אין הודעות עדיין — התחל שיחה!'; }
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+    if (list) {
+      list.innerHTML = data.comments.map(c => {
+        const isMine = c.user_name === MY_NAME;
+        const isMgr  = c.user_role === 'manager';
+        return `<div class="chat-msg ${isMgr?'manager-msg':'agent-msg'} ${isMine?'mine':'theirs'}">
+          <div class="chat-bubble-name">${c.user_name}</div>
+          <div>${c.message}</div>
+          <div class="chat-meta">${c.created_at.slice(11,16)}</div>
+        </div>`;
+      }).join('');
+    }
+    if (box) box.scrollTop = box.scrollHeight;
+  } catch(e) {}
+}
+
+async function sendComment() {
+  const input = document.getElementById('chatInput');
+  const message = input.value.trim();
+  if (!message) return;
+  input.value = '';
+  const res = await fetch('/api/comment', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({customer_id:CUSTOMER_ID, visit_date:VISIT_DATE, message}) });
+  if ((await res.json()).status === 'ok') await loadComments();
+}
+
+loadComments();
+setInterval(loadComments, 10000);
+setInterval(() => {
+  const isTyping = ['INPUT','TEXTAREA'].includes((document.activeElement||{}).tagName);
+  if (!isTyping) location.reload();
+}, 180000);
+
+function updateCharCount(el) {
+  const cc = document.getElementById('charCount');
+  if (cc) cc.textContent = el.value.length + ' תווים';
+}
+
+function markSaved() {
+  const btn = document.getElementById('saveNotesBtn');
+  if (btn) {
+    btn.textContent = '✅ נשמר';
+    btn.style.background = '#16a34a';
+    btn.style.boxShadow = '0 4px 14px rgba(22,163,74,0.35)';
+    btn.disabled = false;
+  }
+}
+
+function markUnsaved() {
+  const btn = document.getElementById('saveNotesBtn');
+  if (btn && btn.textContent.includes('נשמר')) {
+    btn.textContent = '💾 שמור';
+    btn.style.background = '';
+    btn.style.boxShadow = '';
+  }
+}
+
+async function saveNotes() {
+  const notes = document.getElementById('notesField')?.value || '';
+  const btn = document.getElementById('saveNotesBtn');
+  if (btn) { btn.textContent = '⏳...'; btn.disabled = true; }
+  await fetch('/api/notes', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({customer_id:CUSTOMER_ID, visit_date:VISIT_DATE, notes}) });
+  showToast('💾 הערות נשמרו');
+  markSaved();
+}
+
+async function saveAll() {
+  const btn = document.getElementById('saveAllBtn');
+  if (document.getElementById('notesField')) {
+    await saveNotes();
+    if (btn) {
+      btn.textContent = '✅ נשמר';
+      btn.style.background = '#16a34a';
+    }
+  } else {
+    showToast('✅ אין שינויים לשמור');
+  }
+}
+
+async function resetVisit() {
+  if (!confirm('לאפס את נתוני הביקור לחנות זו?')) return;
+  const res = await fetch('/api/reset-visit', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({customer_id:CUSTOMER_ID, visit_date:VISIT_DATE}) });
+  if ((await res.json()).status === 'ok') { showToast('🔄 הביקור אופס'); setTimeout(() => location.reload(), 800); }
+}
+
+function cancelAction() {
+  const f = document.getElementById('notesField');
+  if (f) { f.value = ''; showToast('✖ בוטל'); }
+  else showToast('✖ בוטל');
+}
+
+async function togglePhone() {
+  const btn = document.getElementById('phoneBtn');
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+  try {
+    const res = await fetch('/api/toggle_phone', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({customer_id: CUSTOMER_ID, visit_date: VISIT_DATE})
+    });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      showToast(data.is_phone ? '📞 סומן כפגישה טלפונית' : '✖ הסימון הוסר');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showToast('❌ ' + (data.error || 'שגיאה'));
+      if (btn) { btn.disabled = false; btn.textContent = origText; }
+    }
+  } catch(e) {
+    showToast('❌ שגיאת תקשורת — נסה שוב');
+    if (btn) { btn.disabled = false; btn.textContent = origText; }
+  }
+}
+</script>
+
+<div id="maintenance-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(6,13,31,.95);backdrop-filter:blur(8px);align-items:center;justify-content:center;text-align:center;padding:24px;font-family:'Segoe UI',sans-serif;color:#f1f5f9;direction:rtl">
+  <div style="background:rgba(255,255,255,.07);border:1px solid rgba(245,158,11,.4);border-radius:24px;padding:40px 32px;max-width:360px;width:100%;box-shadow:0 0 40px rgba(245,158,11,.15)">
+    <div style="font-size:52px;margin-bottom:18px">🔧</div>
+    <div style="font-size:22px;font-weight:700;margin-bottom:10px">האפליקציה בעדכון</div>
+    <div style="font-size:15px;color:rgba(241,245,249,.6);line-height:1.6">אנחנו מבצעים שדרוג קצר.<br>נא להמתין כמה דקות.</div>
+    <div style="width:36px;height:36px;border:3px solid rgba(245,158,11,.2);border-top-color:#f59e0b;border-radius:50%;animation:spin 1s linear infinite;margin:20px auto 0"></div>
+  </div>
+</div>
+<script>
+let meetingEmails = [];
+
+function handleTagKey(e) {
+  if (e.key === 'Enter' || e.key === ',' || e.key === ' ') {
+    e.preventDefault();
+    tryAddTag();
+  } else if (e.key === 'Backspace' && e.target.value === '' && meetingEmails.length) {
+    removeTag(meetingEmails.length - 1);
+  }
+}
+function tryAddTag() {
+  const input = document.getElementById('emailTagInput');
+  const val = input.value.trim().replace(/,$/, '');
+  if (!val || !val.includes('@') || !val.split('@')[1]?.includes('.')) return;
+  if (meetingEmails.includes(val) || meetingEmails.length >= 20) { input.value = ''; return; }
+  meetingEmails.push(val);
+  renderTags();
+  input.value = '';
+}
+function removeTag(i) {
+  meetingEmails.splice(i, 1);
+  renderTags();
+}
+function renderTags() {
+  const box = document.getElementById('emailTagsBox');
+  const input = document.getElementById('emailTagInput');
+  box.querySelectorAll('.email-tag').forEach(el => el.remove());
+  meetingEmails.forEach((email, i) => {
+    const tag = document.createElement('div');
+    tag.className = 'email-tag';
+    tag.innerHTML = `${email}<span class="remove-tag" onclick="removeTag(${i})">×</span>`;
+    box.insertBefore(tag, input);
+  });
+}
+
+function openMeetingModal() {
+  meetingEmails = [];
+  renderTags();
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(10, 0, 0, 0);
+  const pad = n => String(n).padStart(2, '0');
+  document.getElementById('meetingDate').value = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth()+1)}-${pad(tomorrow.getDate())}`;
+  document.getElementById('meetingTime').value = '10:00';
+  document.getElementById('meetingModal').classList.add('open');
+}
+function closeMeetingModal() {
+  document.getElementById('meetingModal').classList.remove('open');
+}
+document.getElementById('meetingModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeMeetingModal(); });
+
+async function sendMeeting() {
+  const emails = meetingEmails.slice();
+  if (!emails.length) { showToast('⚠️ נא להוסיף לפחות מייל אחד'); return; }
+  const date = document.getElementById('meetingDate').value;
+  if (!date) { showToast('⚠️ נא לבחור תאריך'); return; }
+  const time = document.getElementById('meetingTime').value || '10:00';
+  const btn = document.getElementById('sendMeetingBtn');
+  btn.disabled = true; btn.textContent = '⏳ שולח...';
+  try {
+    const res = await fetch('/api/schedule-meeting', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        emails,
+        subject: document.getElementById('meetingSubject').value,
+        date,
+        time,
+        duration: parseInt(document.getElementById('meetingDuration').value),
+        notes: document.getElementById('meetingNotes').value,
+        store_name: '{{ customer.name }}'
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      showToast('✅ ' + data.message);
+      closeMeetingModal();
+    } else {
+      showToast('❌ ' + (data.error || 'שגיאה בשליחה'));
+    }
+  } catch(e) {
+    showToast('❌ שגיאת תקשורת');
+  }
+  btn.disabled = false; btn.textContent = '📨 שלח זימון';
+}
+</script>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+<script>
+setInterval(async () => {
+  try {
+    const r = await fetch('/api/maintenance-status');
+    const d = await r.json();
+    const el = document.getElementById('maintenance-overlay');
+    el.style.display = d.maintenance ? 'flex' : 'none';
+  } catch(e) {}
+}, 5000);
+</script>
+</body>
+</html>

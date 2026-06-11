@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>כניסת מנהל — {{ cfg.company_name if cfg else 'SmartConnect' }}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+       background:linear-gradient(135deg,#001f5b 0%,#003280 50%,#0051c8 100%);
+       min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{background:#fff;border-radius:20px;padding:40px 36px;width:100%;max-width:380px;
+        box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+  .logo{text-align:center;margin-bottom:28px}
+  .logo-title{font-size:28px;font-weight:900;color:#003280;letter-spacing:2px}
+  .logo-sub{font-size:13px;color:#64748b;margin-top:6px}
+  .shield{font-size:40px;margin-bottom:8px}
+  label{display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:6px}
+  input{width:100%;border:1.5px solid #d1d5db;border-radius:10px;padding:12px 14px;
+        font-size:15px;font-family:inherit;outline:none;transition:border 0.2s;direction:ltr;text-align:right}
+  input:focus{border-color:#003280;box-shadow:0 0 0 3px rgba(0,50,128,0.1)}
+  .field{margin-bottom:18px}
+  .btn{width:100%;background:linear-gradient(135deg,#003280,#0051c8);color:#fff;
+       border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;
+       cursor:pointer;font-family:inherit;transition:opacity 0.2s;margin-top:8px}
+  .btn:hover{opacity:0.9}
+  .error{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:10px;
+         padding:12px 14px;font-size:14px;margin-bottom:18px;text-align:center}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="shield">🛡️</div>
+    <div class="logo-title">{{ cfg.company_name if cfg else 'SmartConnect' }}</div>
+    <div class="logo-sub">כניסת מנהל מערכת</div>
+  </div>
+
+  {% if error %}
+  <div class="error">❌ {{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="/admin/login">
+    <div class="field">
+      <label for="username">שם משתמש</label>
+      <input id="username" name="username" type="text" autocomplete="username"
+             placeholder="Admin" required autofocus>
+    </div>
+    <div class="field">
+      <label for="password">סיסמה</label>
+      <input id="password" name="password" type="password" autocomplete="current-password"
+             placeholder="••••••••" required>
+    </div>
+    <button class="btn" type="submit">כניסה למערכת →</button>
+  </form>
+</div>
+</body>
+</html>

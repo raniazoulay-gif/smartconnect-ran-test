@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ניהול לקוחות — {{ cfg.company_name if cfg else 'SmartConnect' }}</title>
+<style>
+:root{
+  --primary:#003280;--primary2:#0051c8;
+  --bg:#f0f4ff;--card:#fff;--border:#e2e8f0;
+  --text:#1e293b;--muted:#64748b;--r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+     background:var(--bg);color:var(--text);direction:rtl;min-height:100vh}
+
+/* ── HEADER ── */
+.header{background:linear-gradient(135deg,#001f5b 0%,#003280 60%,#0051c8 100%);
+        padding:14px 20px;display:flex;align-items:center;justify-content:space-between;
+        position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,0.2)}
+.header-title{font-size:20px;font-weight:900;color:#fff;letter-spacing:1px}
+.header-sub{font-size:12px;color:rgba(255,255,255,0.7);margin-top:2px}
+.header-actions{display:flex;gap:10px;align-items:center}
+.hbtn{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);
+      color:#fff;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;
+      cursor:pointer;text-decoration:none;font-family:inherit;transition:all 0.2s;white-space:nowrap}
+.hbtn:hover{background:rgba(255,255,255,0.28)}
+.hbtn.danger{background:rgba(220,38,38,0.3);border-color:rgba(220,38,38,0.4)}
+.hbtn.trash-btn{background:rgba(255,255,255,0.1)}
+
+/* ── FILTERS ── */
+.filters{padding:16px 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+         background:#fff;border-bottom:1px solid var(--border);position:sticky;top:60px;z-index:99}
+.search-wrap{position:relative;flex:1;min-width:180px}
+.search-wrap input{width:100%;border:1.5px solid var(--border);border-radius:10px;
+                   padding:10px 36px 10px 14px;font-size:14px;font-family:inherit;
+                   outline:none;transition:border 0.2s}
+.search-wrap input:focus{border-color:var(--primary)}
+.search-icon{position:absolute;right:11px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+select{border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;
+       font-size:14px;font-family:inherit;outline:none;background:#fff;cursor:pointer;color:var(--text)}
+select:focus{border-color:var(--primary)}
+.add-btn{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;
+         border:none;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:700;
+         cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0}
+.stats-bar{padding:8px 20px;background:#f8fafc;border-bottom:1px solid var(--border);
+           font-size:12px;color:var(--muted)}
+
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto;padding:0 16px 80px}
+table{width:100%;border-collapse:collapse;margin-top:12px;min-width:700px}
+th{background:#f1f5f9;color:var(--muted);font-size:11px;font-weight:700;
+   text-align:right;padding:10px 12px;border-bottom:2px solid var(--border);white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid var(--border);font-size:14px;vertical-align:middle}
+tr:hover td{background:#f8faff}
+tr.deleted-row td{opacity:0.4}
+.no-day{color:var(--muted);font-style:italic}
+.day-badge{display:inline-block;background:#eff6ff;color:var(--primary);
+           border:1px solid #bfdbfe;border-radius:20px;padding:2px 10px;
+           font-size:12px;font-weight:700;white-space:nowrap}
+.region-badge{display:inline-block;background:#f0fdf4;color:#15803d;
+              border:1px solid #bbf7d0;border-radius:20px;padding:2px 10px;
+              font-size:11px;font-weight:600;max-width:130px;overflow:hidden;
+              text-overflow:ellipsis;white-space:nowrap}
+.action-cell{white-space:nowrap;text-align:center}
+.edit-btn{background:#eff6ff;border:1px solid #bfdbfe;color:var(--primary);
+          border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;
+          cursor:pointer;font-family:inherit;transition:all 0.2s;margin-left:4px}
+.edit-btn:hover{background:#dbeafe}
+.del-btn{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;
+         border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;
+         cursor:pointer;font-family:inherit;transition:all 0.2s}
+.del-btn:hover{background:#fee2e2}
+
+/* ── LOADING / EMPTY ── */
+.loading{text-align:center;padding:60px 20px;color:var(--muted);font-size:15px}
+.spinner{display:inline-block;width:32px;height:32px;border:3px solid #e2e8f0;
+         border-top-color:var(--primary);border-radius:50%;animation:spin 0.7s linear infinite;margin-bottom:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-icon{font-size:40px;margin-bottom:12px}
+
+/* ── DRAWER ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;
+         display:none;opacity:0;transition:opacity 0.25s}
+.overlay.open{display:block;opacity:1}
+.drawer{position:fixed;top:0;right:-440px;bottom:0;width:420px;max-width:100vw;
+        background:#fff;z-index:201;overflow-y:auto;
+        box-shadow:-4px 0 30px rgba(0,0,0,0.2);transition:right 0.3s ease}
+.drawer.open{right:0}
+.drawer-header{background:linear-gradient(135deg,#001f5b,#003280);color:#fff;
+               padding:18px 20px;display:flex;justify-content:space-between;align-items:center}
+.drawer-title{font-size:16px;font-weight:800}
+.drawer-close{background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:8px;
+              padding:6px 12px;font-size:18px;cursor:pointer;font-family:inherit}
+.drawer-body{padding:20px}
+.form-field{margin-bottom:16px}
+.form-field label{display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:6px}
+.form-field input,.form-field select{width:100%;border:1.5px solid var(--border);border-radius:10px;
+  padding:10px 12px;font-size:14px;font-family:inherit;outline:none;transition:border 0.2s;background:#fff}
+.form-field input:focus,.form-field select:focus{border-color:var(--primary)}
+.weeks-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.week-btn{background:#f1f5f9;border:2px solid #e2e8f0;border-radius:10px;
+          padding:10px 0;font-size:15px;font-weight:800;font-family:inherit;
+          cursor:pointer;transition:all 0.15s;color:#374151;
+          min-width:52px;text-align:center;user-select:none;
+          touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.week-btn:hover{background:#dbeafe;border-color:#93c5fd;color:var(--primary)}
+.week-btn.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.drawer-footer{display:flex;gap:10px;padding:16px 20px;border-top:1px solid var(--border)}
+.btn-save{flex:1;background:linear-gradient(135deg,var(--primary),var(--primary2));
+          color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;
+          font-weight:700;cursor:pointer;font-family:inherit}
+.btn-cancel{background:#f1f5f9;color:var(--muted);border:none;border-radius:12px;
+            padding:13px 20px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-save:hover{opacity:0.9}
+.btn-cancel:hover{background:#e2e8f0}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ── MODAL (Add) ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;
+               display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:18px;width:100%;max-width:500px;
+       max-height:92vh;display:flex;flex-direction:column;
+       box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.modal-header{background:linear-gradient(135deg,#001f5b,#003280);color:#fff;
+              padding:18px 20px;border-radius:18px 18px 0 0;flex-shrink:0;
+              display:flex;justify-content:space-between;align-items:center}
+.modal-body{padding:20px;overflow-y:auto;flex:1}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--border);
+              display:flex;gap:10px;flex-shrink:0;background:#fff;
+              border-radius:0 0 18px 18px}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+       background:#1e293b;color:#fff;border-radius:12px;padding:12px 24px;
+       font-size:14px;font-weight:600;z-index:500;opacity:0;
+       transition:opacity 0.3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.toast.success{background:#15803d}
+.toast.error{background:#dc2626}
+
+@media(max-width:600px){
+  .filters{top:56px}
+  .form-row{grid-template-columns:1fr}
+  .drawer{width:100%}
+  table{min-width:500px}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <div class="header-title">🏪 ניהול לקוחות</div>
+    <div class="header-sub">{{ cfg.company_name if cfg else 'SmartConnect' }} Admin Panel</div>
+  </div>
+  <div class="header-actions">
+    <a href="/admin/trash" class="hbtn trash-btn">🗑️ מחוקים</a>
+    <a href="/admin/logout" class="hbtn danger">יציאה</a>
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="filters">
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input id="searchInput" type="text" placeholder="חיפוש שם / עיר / קוד...">
+  </div>
+  <select id="agentFilter">
+    <option value="">כל הסוכנים</option>
+  </select>
+  <select id="dayFilter">
+    <option value="">כל הימים</option>
+    <option value="א">ראשון</option>
+    <option value="ב">שני</option>
+    <option value="ג">שלישי</option>
+    <option value="ד">רביעי</option>
+    <option value="ה">חמישי</option>
+  </select>
+  <button class="add-btn" onclick="openAdd()">+ הוסף לקוח</button>
+  <button class="add-btn" style="background:linear-gradient(135deg,#059669,#047857)" onclick="document.getElementById('excelInput').click()">📥 ייבוא Excel</button>
+  <input type="file" id="excelInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
+</div>
+<div class="stats-bar" id="statsBar">טוען...</div>
+
+<!-- TABLE -->
+<div class="table-wrap">
+  <div id="tableContent">
+    <div class="loading"><div class="spinner"></div><br>טוען לקוחות...</div>
+  </div>
+</div>
+
+<!-- EDIT DRAWER -->
+<div class="overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="editDrawer">
+  <div class="drawer-header">
+    <span class="drawer-title">✏️ עריכת לקוח</span>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body">
+    <input type="hidden" id="editId">
+    <div class="form-row">
+      <div class="form-field">
+        <label>קוד לקוח</label>
+        <input id="editCode" type="text" placeholder="קוד ERP">
+      </div>
+      <div class="form-field">
+        <label>עיר</label>
+        <input id="editCity" type="text" placeholder="עיר">
+      </div>
+    </div>
+    <div class="form-field">
+      <label>שם לקוח <span style="color:#dc2626">*</span></label>
+      <input id="editName" type="text" placeholder="שם החנות / הלקוח">
+    </div>
+    <div class="form-field">
+      <label>כתובת</label>
+      <input id="editAddress" type="text" placeholder="רחוב ומספר">
+    </div>
+    <div class="form-field">
+      <label>אזור / סוכן</label>
+      <select id="editRegion"></select>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label>יום ביקור</label>
+        <select id="editDay">
+          <option value="">— ללא יום —</option>
+          <option value="א">ראשון</option>
+          <option value="ב">שני</option>
+          <option value="ג">שלישי</option>
+          <option value="ד">רביעי</option>
+          <option value="ה">חמישי</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>יום אספקה</label>
+        <select id="editDelivery">
+          <option value="">— ללא —</option>
+          <option value="א">ראשון</option>
+          <option value="ב">שני</option>
+          <option value="ג">שלישי</option>
+          <option value="ד">רביעי</option>
+          <option value="ה">חמישי</option>
+          <option value="א/ב">א/ב</option>
+          <option value="א/ג">א/ג</option>
+          <option value="ב">ב</option>
+          <option value="ג/ד">ג/ד</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-field">
+      <label>שבועות ביקור</label>
+      <div class="weeks-grid" id="editWeeks">
+        <div class="week-btn" data-week="1">ש1</div>
+        <div class="week-btn" data-week="2">ש2</div>
+        <div class="week-btn" data-week="3">ש3</div>
+        <div class="week-btn" data-week="4">ש4</div>
+        <div class="week-btn" data-week="5">ש5</div>
+        <div class="week-btn" data-week="6">ש6</div>
+        <div class="week-btn" data-week="7">ש7</div>
+      </div>
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <button type="button" class="btn-cancel" onclick="closeDrawer()">ביטול</button>
+    <button type="button" class="btn-save" onclick="saveEdit()">💾 שמור שינויים</button>
+  </div>
+</div>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span style="font-size:16px;font-weight:800">➕ הוספת לקוח חדש</span>
+      <button class="drawer-close" onclick="closeAdd()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-field">
+          <label>קוד לקוח <span style="color:#dc2626">*</span></label>
+          <input id="addCode" type="text" placeholder="קוד מה-ERP">
+        </div>
+        <div class="form-field">
+          <label>עיר</label>
+          <input id="addCity" type="text" placeholder="עיר">
+        </div>
+      </div>
+      <div class="form-field">
+        <label>שם לקוח <span style="color:#dc2626">*</span></label>
+        <input id="addName" type="text" placeholder="שם החנות / הלקוח">
+      </div>
+      <div class="form-field">
+        <label>כתובת</label>
+        <input id="addAddress" type="text" placeholder="רחוב ומספר">
+      </div>
+      <div class="form-field">
+        <label>אזור / סוכן</label>
+        <select id="addRegion"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label>יום ביקור</label>
+          <select id="addDay">
+            <option value="">— ללא יום —</option>
+            <option value="א">ראשון</option>
+            <option value="ב">שני</option>
+            <option value="ג">שלישי</option>
+            <option value="ד">רביעי</option>
+            <option value="ה">חמישי</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>יום אספקה</label>
+          <select id="addDelivery">
+            <option value="">— ללא —</option>
+            <option value="א">ראשון</option>
+            <option value="ב">שני</option>
+            <option value="ג">שלישי</option>
+            <option value="ד">רביעי</option>
+            <option value="ה">חמישי</option>
+            <option value="א/ב">א/ב</option>
+            <option value="א/ג">א/ג</option>
+            <option value="ג/ד">ג/ד</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-field">
+        <label>שבועות ביקור</label>
+        <div class="weeks-grid" id="addWeeks">
+          <div class="week-btn" data-week="1">ש1</div>
+          <div class="week-btn" data-week="2">ש2</div>
+          <div class="week-btn" data-week="3">ש3</div>
+          <div class="week-btn" data-week="4">ש4</div>
+          <div class="week-btn" data-week="5">ש5</div>
+          <div class="week-btn" data-week="6">ש6</div>
+          <div class="week-btn" data-week="7">ש7</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" onclick="closeAdd()">ביטול</button>
+      <button type="button" class="btn-save" onclick="saveAdd()">➕ הוסף לקוח</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+let allCustomers = [];
+let regions = [];
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  initWeekButtons();
+  await loadRegions();
+  await loadCustomers();
+}
+
+async function loadRegions() {
+  const r = await fetch('/admin/api/regions');
+  regions = await r.json();
+  const selects = [document.getElementById('agentFilter'),
+                   document.getElementById('editRegion'),
+                   document.getElementById('addRegion')];
+  // Build unique agent prefixes (גילי, אלי, שיראל)
+  const agents = [...new Set(regions.map(r => r.split('-')[0]))].sort();
+  const agentFilter = document.getElementById('agentFilter');
+  agentFilter.innerHTML = '<option value="">כל הסוכנים</option>';
+  agents.forEach(a => {
+    const opt = document.createElement('option'); opt.value = a; opt.textContent = a;
+    agentFilter.appendChild(opt);
+  });
+  // Full regions for edit/add
+  ['editRegion','addRegion'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">— בחר אזור —</option>';
+    regions.forEach(reg => {
+      const opt = document.createElement('option'); opt.value = reg; opt.textContent = reg;
+      sel.appendChild(opt);
+    });
+  });
+}
+
+async function loadCustomers() {
+  const q     = document.getElementById('searchInput').value.trim();
+  const agent = document.getElementById('agentFilter').value;
+  const day   = document.getElementById('dayFilter').value;
+  const params = new URLSearchParams({q, agent, day});
+  document.getElementById('statsBar').textContent = 'טוען...';
+  document.getElementById('tableContent').innerHTML =
+    '<div class="loading"><div class="spinner"></div><br>טוען...</div>';
+  const r    = await fetch('/admin/api/customers?' + params);
+  allCustomers = await r.json();
+  renderTable(allCustomers);
+  document.getElementById('statsBar').textContent =
+    `מציג ${allCustomers.length} לקוחות` +
+    (q || agent || day ? ' (מסונן)' : '');
+}
+
+function renderTable(list) {
+  if (!list.length) {
+    document.getElementById('tableContent').innerHTML =
+      '<div class="empty"><div class="empty-icon">🔍</div><p>לא נמצאו לקוחות</p></div>';
+    return;
+  }
+  let html = `<table>
+    <thead><tr>
+      <th>קוד</th><th>שם לקוח</th><th>עיר</th>
+      <th>אזור</th><th>יום</th><th>שבועות</th><th>אספקה</th><th>פעולות</th>
+    </tr></thead><tbody>`;
+  list.forEach(c => {
+    const day = c.day
+      ? `<span class="day-badge">יום ${c.day_name}</span>`
+      : `<span class="no-day">ללא יום</span>`;
+    const region = c.region
+      ? `<span class="region-badge" title="${c.region}">${c.region}</span>`
+      : '—';
+    html += `<tr>
+      <td style="font-size:12px;color:var(--muted)">${c.card_code || '—'}</td>
+      <td style="font-weight:600;max-width:200px">${esc(c.name)}</td>
+      <td>${esc(c.city) || '—'}</td>
+      <td>${region}</td>
+      <td>${day}</td>
+      <td style="font-size:12px">${c.weeks_display}</td>
+      <td style="font-size:12px">${c.delivery_day || '—'}</td>
+      <td class="action-cell">
+        <button class="edit-btn" onclick="openEdit(${c.id})">✏️ עריכה</button>
+        <button class="del-btn" onclick="softDelete(${c.id}, '${esc(c.name)}')">🗑️</button>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('tableContent').innerHTML = html;
+}
+
+function esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Search / filter debounce ───────────────────────────────────────────────────
+let _searchTimer;
+document.getElementById('searchInput').addEventListener('input', () => {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(loadCustomers, 350);
+});
+document.getElementById('agentFilter').addEventListener('change', loadCustomers);
+document.getElementById('dayFilter').addEventListener('change', loadCustomers);
+
+// ── Week buttons ──────────────────────────────────────────────────────────────
+function initWeekButtons() {
+  document.querySelectorAll('.week-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      this.classList.toggle('active');
+    });
+  });
+}
+function setWeeks(containerId, activeList) {
+  document.querySelectorAll(`#${containerId} .week-btn`).forEach(btn => {
+    const wn = parseInt(btn.dataset.week);
+    btn.classList.toggle('active', activeList.includes(wn));
+  });
+}
+function getWeeks(containerId) {
+  const result = [];
+  document.querySelectorAll(`#${containerId} .week-btn.active`).forEach(btn => {
+    result.push(parseInt(btn.dataset.week));
+  });
+  return result;
+}
+
+// ── EDIT DRAWER ───────────────────────────────────────────────────────────────
+function openEdit(id) {
+  const c = allCustomers.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('editId').value      = c.id;
+  document.getElementById('editCode').value    = c.card_code;
+  document.getElementById('editName').value    = c.name;
+  document.getElementById('editCity').value    = c.city;
+  document.getElementById('editAddress').value = c.address;
+  document.getElementById('editRegion').value  = c.region;
+  document.getElementById('editDay').value     = c.day;
+  document.getElementById('editDelivery').value = c.delivery_day;
+  const active = [];
+  for (let i=1;i<=7;i++) if (c[`week_${i}`]) active.push(i);
+  setWeeks('editWeeks', active);
+  document.getElementById('drawerOverlay').classList.add('open');
+  document.getElementById('editDrawer').classList.add('open');
+}
+function closeDrawer() {
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.getElementById('editDrawer').classList.remove('open');
+}
+async function saveEdit() {
+  const id   = parseInt(document.getElementById('editId').value);
+  const name = document.getElementById('editName').value.trim();
+  if (!name) { showToast('שם לקוח הוא שדה חובה', 'error'); return; }
+  const payload = {
+    card_code:    document.getElementById('editCode').value.trim(),
+    name,
+    city:         document.getElementById('editCity').value.trim(),
+    address:      document.getElementById('editAddress').value.trim(),
+    region:       document.getElementById('editRegion').value,
+    day:          document.getElementById('editDay').value,
+    delivery_day: document.getElementById('editDelivery').value,
+    weeks:        getWeeks('editWeeks'),
+  };
+  try {
+    const r = await fetch(`/admin/api/customers/${id}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) { showToast('❌ שגיאת שרת ' + r.status, 'error'); return; }
+    const data = await r.json();
+    if (data.ok) {
+      showToast('✅ הלקוח עודכן בהצלחה', 'success');
+      closeDrawer();
+      loadCustomers();
+    } else {
+      showToast('❌ ' + (data.error || 'שגיאה בעדכון'), 'error');
+    }
+  } catch (e) {
+    showToast('❌ שגיאה: ' + e.message, 'error');
+    console.error('saveEdit error:', e);
+  }
+}
+
+// ── ADD MODAL ─────────────────────────────────────────────────────────────────
+function openAdd() {
+  document.getElementById('addCode').value    = '';
+  document.getElementById('addName').value    = '';
+  document.getElementById('addCity').value    = '';
+  document.getElementById('addAddress').value = '';
+  document.getElementById('addRegion').value  = '';
+  document.getElementById('addDay').value     = '';
+  document.getElementById('addDelivery').value = '';
+  setWeeks('addWeeks', []);
+  document.getElementById('addModal').classList.add('open');
+}
+function closeAdd() {
+  document.getElementById('addModal').classList.remove('open');
+}
+async function saveAdd() {
+  const name = document.getElementById('addName').value.trim();
+  if (!name) { showToast('שם לקוח הוא שדה חובה', 'error'); return; }
+  const payload = {
+    card_code:    document.getElementById('addCode').value.trim(),
+    name,
+    city:         document.getElementById('addCity').value.trim(),
+    address:      document.getElementById('addAddress').value.trim(),
+    region:       document.getElementById('addRegion').value,
+    day:          document.getElementById('addDay').value,
+    delivery_day: document.getElementById('addDelivery').value,
+    weeks:        getWeeks('addWeeks'),
+  };
+  try {
+    const r = await fetch('/admin/api/customers', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) { showToast('❌ שגיאת שרת ' + r.status, 'error'); return; }
+    const data = await r.json();
+    if (data.ok) {
+      showToast('✅ לקוח חדש נוסף בהצלחה!', 'success');
+      closeAdd();
+      loadCustomers();
+    } else {
+      showToast('❌ ' + (data.error || 'שגיאה בהוספה'), 'error');
+    }
+  } catch (e) {
+    showToast('❌ שגיאה: ' + e.message, 'error');
+    console.error('saveAdd error:', e);
+  }
+}
+
+// ── SOFT DELETE ───────────────────────────────────────────────────────────────
+async function softDelete(id, name) {
+  if (!confirm(`למחוק את "${name}" מהתכנון?\n\nהלקוח ישאר ב-Trash למשך 30 יום ויהיה ניתן לשחזר.`)) return;
+  try {
+    const r    = await fetch(`/admin/api/customers/${id}`, {method: 'DELETE'});
+    if (!r.ok) { showToast('❌ שגיאת שרת ' + r.status, 'error'); return; }
+    const data = await r.json();
+    if (data.ok) {
+      showToast('🗑️ הלקוח הוסר מהתכנון', 'success');
+      loadCustomers();
+    } else {
+      showToast('❌ ' + (data.error || 'שגיאה'), 'error');
+    }
+  } catch (e) {
+    showToast('❌ שגיאה: ' + e.message, 'error');
+  }
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + type;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── IMPORT EXCEL ──────────────────────────────────────────────────────────────
+async function importExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = ""; // אפשר לבחור שוב את אותו קובץ
+
+  if (!confirm(`ייבוא לקוחות מ: ${file.name}\nלקוחות קיימים לא יימחקו — רק יתווספו חדשים.\nהמשך?`)) return;
+
+  showToast("⏳ מייבא לקוחות...", "");
+  const fd = new FormData();
+  fd.append("file", file);
+
+  try {
+    const r = await fetch("/admin/api/import-excel", { method: "POST", body: fd });
+    const res = await r.json();
+
+    if (res.ok) {
+      showToast(`✅ יובאו ${res.inserted} לקוחות בהצלחה`, "success");
+      if (res.skipped > 0) setTimeout(() => showToast(`⚠️ ${res.skipped} שורות דולגו (ללא שם)`, ""), 3200);
+      if (res.errors && res.errors.length > 0) {
+        console.warn("שגיאות ייבוא:", res.errors);
+        setTimeout(() => showToast(`⚠️ ${res.errors.length} שגיאות — ראה Console`, ""), 3200);
+      }
+      loadCustomers();
+    } else {
+      showToast("❌ " + (res.error || "שגיאה בייבוא"), "error");
+    }
+  } catch(e) {
+    showToast("❌ שגיאת רשת: " + e.message, "error");
+  }
+}
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/static/manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="{{ cfg.company_name }}">
+<link rel="apple-touch-icon" href="/static/logo.png">
+<meta name="theme-color" content="#00327d">
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js')}</script>
+<title>מנהל — {{ cfg.company_name }}</title>
+<style>
+:root {
+  --bg: #eef1f8; --bg2: #ffffff;
+  --card: #ffffff; --card-h: #f0f5ff;
+  --border: #dde3ef; --border-h: #b8c5e0;
+  --text: #1a1f36; --muted: #64748b;
+  --primary: {{ cfg.primary_color }}; --primary2: {{ cfg.secondary_color }};
+  --mgr: {{ cfg.primary_color }}; --mgr2: #003d9a;
+  --success: #16a34a; --warning: #d97706; --danger: #dc2626;
+  --r: 16px; --r-sm: 10px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',system-ui,Arial,sans-serif; background:var(--bg); color:var(--text); direction:rtl; min-height:100vh; padding-bottom:70px; }
+
+.header-bar { height:4px; background:linear-gradient(90deg,var(--primary),var(--primary2)); }
+.app-header { background:var(--primary); border-bottom:none; padding:0 0 14px; }
+.header-top { display:flex; justify-content:space-between; align-items:center; padding:14px 20px 10px; }
+.header-logo img { height:72px; width:auto; filter:invert(1); mix-blend-mode:screen; }
+.header-logo-text { font-size:24px; font-weight:900; letter-spacing:2px; color:white; }
+.header-center { flex:1; text-align:center; }
+.header-title { font-size:19px; font-weight:700; color:white; }
+.header-sub { font-size:12px; color:rgba(255,255,255,0.7); margin-top:2px; }
+.logout-btn { background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); color:rgba(255,255,255,0.9); border-radius:8px; padding:7px 14px; font-size:13px; cursor:pointer; text-decoration:none; transition:all 0.2s; }
+.logout-btn:hover { background:rgba(255,255,255,0.25); color:white; }
+
+.day-nav { display:flex; align-items:center; justify-content:space-between; margin:0 16px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.15); border-radius:14px; padding:10px 16px; }
+.nav-btn { background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.2); color:white; border-radius:8px; padding:7px 14px; font-size:14px; cursor:pointer; text-decoration:none; transition:all 0.2s; }
+.nav-btn:hover { background:rgba(255,255,255,0.25); }
+.day-name { font-size:17px; font-weight:700; color:white; text-align:center; }
+.day-date { font-size:12px; color:rgba(255,255,255,0.7); text-align:center; margin-top:2px; }
+.today-btn { display:inline-block; margin-top:7px; background:rgba(255,255,255,0.22); border:1.5px solid rgba(255,255,255,0.45); color:white; border-radius:20px; padding:4px 16px; font-size:12px; font-weight:700; cursor:pointer; text-decoration:none; letter-spacing:0.3px; transition:all 0.2s; }
+.today-btn:hover { background:rgba(255,255,255,0.38); }
+
+.tabs { display:flex; background:var(--bg2); border-bottom:1px solid var(--border); padding:0 16px; overflow-x:auto; box-shadow:0 1px 4px rgba(0,50,125,0.06); }
+.tab { padding:13px 18px; font-size:13px; font-weight:600; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; white-space:nowrap; text-decoration:none; transition:all 0.2s; }
+.tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+.tab:hover:not(.active) { color:var(--text); }
+
+.badge { background:rgba(0,50,125,0.15); color:var(--primary); border:1px solid rgba(0,50,125,0.25); border-radius:20px; padding:1px 8px; font-size:11px; margin-right:4px; }
+
+.content { padding:16px; }
+
+.section-title { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.section-title::before { content:''; display:inline-block; width:3px; height:14px; background:linear-gradient(180deg,var(--primary),var(--primary2)); border-radius:2px; }
+
+.agent-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+.agent-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:18px; text-decoration:none; color:inherit; transition:all 0.2s; position:relative; overflow:hidden; box-shadow:0 1px 4px rgba(0,50,125,0.06); }
+.agent-card::before { content:''; position:absolute; top:0; right:0; width:4px; height:100%; border-radius:0 var(--r) var(--r) 0; }
+/* גילי - תכלת */
+.agent-gili_agent::before { background:linear-gradient(180deg,#0ea5e9,#38bdf8); }
+/* אלי - סגול */
+.agent-eli::before        { background:linear-gradient(180deg,#8b5cf6,#7c3aed); }
+/* שיראל - ורוד */
+.agent-shirael::before    { background:linear-gradient(180deg,#f472b6,#ec4899); }
+/* fallback */
+.agent-card:not([class*="agent-gili_agent"]):not([class*="agent-eli"]):not([class*="agent-shirael"])::before { background:linear-gradient(180deg,#0ea5e9,#38bdf8); }
+.agent-card:hover { background:var(--card-h); border-color:var(--border-h); transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,50,125,0.1); }
+.agent-name { font-size:16px; font-weight:700; color:var(--text); margin-bottom:4px; }
+.agent-region { font-size:11px; color:var(--muted); margin-bottom:12px; }
+.agent-visits { font-size:28px; font-weight:700; color:var(--primary); line-height:1; }
+.agent-visits.progress-red    { color:#dc2626; }
+.agent-visits.progress-orange { color:#f97316; }
+.agent-visits.progress-green  { color:#16a34a; }
+.agent-visits.progress-gold   { color:#d4a000; }
+.agent-visits-lbl { font-size:10px; color:var(--muted); margin-top:2px; }
+.agent-active { margin-top:8px; background:#dcfce7; border:1px solid #bbf7d0; border-radius:8px; padding:6px 10px; font-size:11px; color:#16a34a; font-weight:600; }
+.agent-pie { display:flex; justify-content:center; margin:10px 0 2px; }
+.agent-pie svg path { transition:stroke-width .15s; }
+.agent-pie svg path:hover { stroke-width:18 !important; }
+
+.notif-item { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:14px 16px; margin-bottom:8px; display:flex; gap:12px; align-items:flex-start; position:relative; overflow:hidden; box-shadow:0 1px 3px rgba(0,50,125,0.05); }
+.notif-item::before { content:''; position:absolute; bottom:0; right:0; width:3px; height:100%; }
+.notif-item.checkin::before  { background:var(--success); }
+.notif-item.checkout::before { background:var(--primary); }
+.notif-item.eod_report::before { background:var(--danger); }
+.notif-icon { font-size:20px; }
+.notif-msg { font-size:13px; font-weight:600; color:var(--text); margin-bottom:3px; }
+.notif-time { font-size:11px; color:var(--muted); }
+
+.visits-table { width:100%; border-collapse:collapse; }
+.visits-table th { background:#f8fafc; padding:10px 12px; font-size:12px; font-weight:700; color:var(--muted); text-align:right; border-bottom:1px solid var(--border); }
+.visits-table td { padding:11px 12px; font-size:13px; color:var(--text); border-bottom:1px solid var(--border); }
+.visits-table tr:hover td { background:#f0f5ff; }
+
+.agent-pill { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; color:#1a1f36; background:#e8f0fe; }
+.pill-gili_agent { background:#bfdbfe; color:#1e40af; }
+.pill-eli        { background:#e9d5ff; color:#6d28d9; }
+.pill-shirael    { background:#fce7f3; color:#9d174d; }
+.pill-shirel     { background:#fce7f3; color:#9d174d; }
+.pill-manager    { background:#dcfce7; color:#16a34a; }
+.status-dot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-left:5px; }
+.dot-in { background:var(--success); } .dot-done { background:var(--primary); }
+
+.empty-state { text-align:center; padding:40px; color:var(--muted); }
+
+.chat-btn { background:linear-gradient(135deg,var(--primary),var(--primary2)); color:white; border:none; border-radius:8px; padding:5px 11px; font-size:12px; cursor:pointer; white-space:nowrap; transition:opacity 0.2s; }
+.chat-btn:hover { opacity:0.85; }
+.chat-btn.has-msgs { background:linear-gradient(135deg,#1a4fa0,#2563eb); }
+
+/* Chat overlay */
+.chat-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; display:none; align-items:flex-end; }
+.chat-overlay.open { display:flex; }
+.chat-panel { width:100%; background:var(--bg2); border-radius:24px 24px 0 0; max-height:85vh; display:flex; flex-direction:column; animation:slideUp 0.3s ease; border-top:1px solid var(--border); box-shadow:0 -4px 20px rgba(0,50,125,0.12); }
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+.chat-panel-header { background:linear-gradient(135deg,var(--primary),var(--primary2)); color:white; padding:18px 20px 16px; border-radius:24px 24px 0 0; display:flex; justify-content:space-between; align-items:flex-start; flex-shrink:0; }
+.chat-panel-title { font-size:17px; font-weight:700; }
+.chat-panel-sub { font-size:12px; opacity:0.85; margin-top:3px; }
+.chat-close { background:rgba(255,255,255,0.2); border:none; color:white; border-radius:8px; padding:6px 12px; font-size:18px; cursor:pointer; line-height:1; }
+.chat-messages-wrap { flex:1; overflow-y:auto; padding:16px 16px 8px; display:flex; flex-direction:column; gap:12px; min-height:0; background:white; }
+.chat-msg { max-width:78%; padding:10px 14px; border-radius:16px; font-size:14px; line-height:1.5; }
+.chat-msg.manager-msg { background:#dcfce7; color:#14532d; }
+.chat-msg.agent-msg   { background:#dbeafe; color:#1e3a8a; }
+.chat-msg.mine   { align-self:flex-start; border-bottom-right-radius:4px; }
+.chat-msg.theirs { align-self:flex-end;   border-bottom-left-radius:4px; }
+.chat-bubble-name { font-size:11px; font-weight:700; opacity:0.65; margin-bottom:3px; }
+.chat-meta { font-size:11px; opacity:0.6; margin-top:5px; }
+.chat-empty-msg { text-align:center; color:var(--muted); font-size:14px; padding:20px; }
+.notes-banner { background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:12px 14px; margin:0 16px 8px; font-size:13px; color:#92400e; flex-shrink:0; }
+.notes-banner strong { display:block; margin-bottom:4px; font-size:12px; color:#b45309; }
+.chat-input-area { padding:12px 16px 20px; border-top:1px solid var(--border); display:flex; gap:10px; flex-shrink:0; background:var(--bg2); }
+.chat-text-input { flex:1; padding:12px 14px; background:#f8fafc; border:1.5px solid var(--border); border-radius:12px; font-size:14px; font-family:inherit; direction:rtl; text-align:right; color:var(--text); outline:none; transition:all 0.2s; }
+.chat-text-input:focus { border-color:var(--primary); background:#f0f5ff; }
+.chat-text-input::placeholder { color:#94a3b8; }
+.chat-send-btn { background:linear-gradient(135deg,var(--primary),var(--primary2)); color:white; border:none; border-radius:12px; padding:12px 18px; font-size:18px; cursor:pointer; transition:opacity 0.2s; }
+.chat-send-btn:hover { opacity:0.85; }
+
+/* Agent filter tabs */
+.agent-filter-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.agent-filter-btn { padding:7px 16px; border-radius:20px; border:1.5px solid var(--border); background:#f8fafc; color:var(--muted); font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; transition:all 0.2s; }
+.agent-filter-btn.active { background:linear-gradient(135deg,var(--primary),var(--primary2)); color:white; border-color:transparent; box-shadow:0 3px 10px rgba(0,50,125,0.2); }
+.agent-filter-btn:hover:not(.active) { border-color:var(--border-h); color:var(--text); }
+
+/* Unread chats */
+.unread-chat-row { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px 16px; margin-bottom:8px; cursor:pointer; border-right:3px solid var(--primary); display:flex; justify-content:space-between; align-items:center; transition:all 0.2s; box-shadow:0 1px 3px rgba(0,50,125,0.05); }
+.unread-chat-row:hover { background:var(--card-h); }
+.unread-chat-name { font-size:14px; font-weight:700; color:var(--text); }
+.unread-chat-msg { font-size:13px; color:var(--muted); margin-top:2px; }
+.unread-chat-time { font-size:12px; color:var(--muted); }
+
+/* EOD */
+.eod-card { background:#fff; border:1.5px solid var(--border); border-radius:16px; margin-bottom:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,50,125,0.07); }
+.eod-card-header { background:linear-gradient(135deg,var(--primary),var(--primary2)); padding:12px 16px; display:flex; justify-content:space-between; align-items:center; }
+.eod-card-title { font-size:14px; font-weight:700; color:white; }
+.eod-card-date  { font-size:11px; color:rgba(255,255,255,0.8); }
+.eod-card-body  { padding:12px 16px; }
+.eod-stats-row  { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+.eod-stat { flex:1; min-width:80px; background:#f8fafc; border:1px solid var(--border); border-radius:10px; padding:10px; text-align:center; }
+.eod-stat-val  { font-size:20px; font-weight:800; color:var(--primary); line-height:1; }
+.eod-stat-lbl  { font-size:10px; color:var(--muted); margin-top:3px; font-weight:600; }
+.eod-stat.ok   .eod-stat-val { color:#16a34a; }
+.eod-stat.warn .eod-stat-val { color:#d97706; }
+.eod-stat.bad  .eod-stat-val { color:#dc2626; }
+.eod-stores-title { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; }
+.eod-stores-list { display:flex; flex-direction:column; gap:4px; }
+.eod-store-row { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:8px; font-size:13px; font-weight:600; }
+.eod-store-row.visited { background:#f0fdf4; border:1px solid #bbf7d0; color:#15803d; }
+.eod-store-row.partial { background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+.eod-store-row.missed  { background:#fef2f2; border:1px solid #fecaca; color:#dc2626; }
+.eod-store-icon { font-size:14px; flex-shrink:0; }
+.eod-title { font-size:14px; font-weight:700; color:var(--primary); margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+
+/* Customer search */
+.search-wrap { position:relative; margin:0 16px 16px; }
+.search-input { width:100%; padding:11px 42px 11px 14px; background:#fff; border:1.5px solid var(--border); border-radius:12px; font-size:14px; font-family:inherit; direction:rtl; color:var(--text); outline:none; transition:all 0.2s; box-shadow:0 1px 4px rgba(0,50,125,0.06); }
+.search-input:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(0,50,125,0.08); }
+.search-input::placeholder { color:#94a3b8; }
+.search-icon { position:absolute; right:13px; top:50%; transform:translateY(-50%); font-size:16px; pointer-events:none; }
+.search-dropdown { position:absolute; top:calc(100% + 4px); right:0; left:0; background:#fff; border:1px solid var(--border); border-radius:12px; box-shadow:0 8px 30px rgba(0,50,125,0.12); z-index:100; max-height:240px; overflow-y:auto; display:none; }
+.search-dropdown.open { display:block; }
+.search-item { padding:10px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9; transition:background 0.15s; }
+.search-item:last-child { border-bottom:none; }
+.search-item:hover { background:#f0f5ff; }
+.search-item-name { font-size:14px; font-weight:600; color:var(--text); }
+.search-item-meta { font-size:11px; color:var(--muted); margin-top:2px; }
+.search-empty { padding:16px; text-align:center; color:var(--muted); font-size:13px; }
+.search-item { display:flex; justify-content:space-between; align-items:center; }
+.search-item-left { flex:1; min-width:0; }
+.search-item-agent { font-size:11px; font-weight:700; color:var(--primary); background:#e8f0fe; border-radius:10px; padding:2px 8px; white-space:nowrap; margin-right:8px; }
+.hist-btn { background:var(--primary); color:white; border:none; border-radius:8px; padding:5px 10px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+.hist-btn:hover { opacity:0.85; }
+.srch-card { background:#f8fafc; border:1px solid var(--border); border-radius:14px; padding:12px 14px; margin-bottom:4px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition:all 0.15s; }
+.srch-card:hover { background:#eff6ff; border-color:var(--primary); }
+.srch-card.open { background:#eff6ff; border-color:var(--primary); border-bottom-left-radius:4px; border-bottom-right-radius:4px; }
+.srch-card-name { font-size:15px; font-weight:700; color:var(--text); margin-bottom:2px; }
+.srch-card-meta { font-size:12px; color:var(--muted); }
+.srch-card-arrow { color:var(--primary); font-size:12px; flex-shrink:0; margin-right:8px; }
+.srch-dates { display:none; flex-direction:column; gap:6px; padding:6px 14px 12px; background:#eff6ff; border:1px solid var(--primary); border-top:none; border-radius:0 0 14px 14px; margin-bottom:10px; }
+.srch-date-btn { display:block; background:white; border:1px solid #bfdbfe; border-radius:10px; padding:10px 14px; font-size:14px; font-weight:600; color:var(--primary); text-decoration:none; text-align:center; transition:all 0.15s; }
+.srch-date-btn:hover { background:#dbeafe; }
+.srch-empty { text-align:center; color:var(--muted); padding:20px; font-size:14px; }
+
+/* History modal */
+.hist-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:300; align-items:flex-end; }
+.hist-overlay.open { display:flex; }
+.hist-panel { width:100%; background:#fff; border-radius:24px 24px 0 0; max-height:88vh; display:flex; flex-direction:column; animation:slideUp 0.3s ease; }
+.hist-header { background:linear-gradient(135deg,var(--primary),var(--primary2)); color:white; padding:18px 20px; border-radius:24px 24px 0 0; display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+.hist-title { font-size:17px; font-weight:700; }
+.hist-close { background:rgba(255,255,255,0.2); border:none; color:white; border-radius:8px; padding:6px 12px; font-size:18px; cursor:pointer; }
+.hist-body { flex:1; overflow-y:auto; padding:16px; }
+.hist-visit { background:#f8fafc; border:1px solid var(--border); border-radius:14px; padding:14px 16px; margin-bottom:12px; }
+.hist-visit-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.hist-date { font-size:14px; font-weight:700; color:var(--text); }
+.hist-agent-badge { font-size:11px; font-weight:700; color:white; background:var(--primary); border-radius:20px; padding:3px 10px; }
+.hist-meta { display:flex; gap:14px; font-size:12px; color:var(--muted); margin-bottom:8px; flex-wrap:wrap; }
+.hist-notes { background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:9px 12px; font-size:13px; color:#92400e; margin-bottom:8px; }
+.hist-comment { padding:7px 10px; border-radius:8px; font-size:13px; margin-bottom:4px; }
+.hist-comment.mgr  { background:#e8f0fe; color:var(--primary); }
+.hist-comment.agent{ background:#f0fdf4; color:#15803d; }
+.hist-comment-meta { font-size:10px; opacity:0.7; margin-top:2px; }
+.hist-empty { text-align:center; padding:40px; color:var(--muted); font-size:14px; }
+
+/* Bottom bar */
+.bottom-bar { position:fixed; bottom:0; left:0; right:0; background:rgba(255,255,255,0.97); backdrop-filter:blur(12px); border-top:1px solid var(--border); padding:10px 16px 14px; display:flex; gap:8px; z-index:50; box-shadow:0 -2px 12px rgba(0,50,125,0.08); }
+.bar-btn { flex:1; padding:9px 8px; border:none; border-radius:var(--r-sm); font-size:13px; font-weight:700; cursor:pointer; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:5px; transition:all 0.2s; font-family:inherit; }
+.btn-primary { background:linear-gradient(135deg,var(--primary),var(--primary2)); color:white; box-shadow:0 4px 14px rgba(0,50,125,0.2); }
+.btn-ghost   { background:#f1f5f9; color:var(--text); border:1px solid var(--border); }
+.btn-refresh { background:#fffbeb; color:#92400e; border:1px solid #fde68a; }
+.bar-btn:hover { transform:translateY(-1px); filter:brightness(0.95); }
+</style>
+</head>
+<body>
+
+<div class="header-bar"></div>
+<div class="app-header">
+  <div class="header-top">
+    <div class="header-logo">
+      <img src="/static/logo.png" alt="{{ cfg.company_name }}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <div class="header-logo-text" style="display:none">{{ cfg.company_name }}</div>
+    </div>
+    <div class="header-center">
+      <div class="header-title">גיל אדר - מנהל מכירות</div>
+      <div class="header-sub">{{ selected_date.strftime('%d/%m/%Y') }}</div>
+    </div>
+    <a href="/logout" class="logout-btn">יציאה</a>
+  </div>
+
+  <div class="day-nav">
+    <a href="/manager?date={{ prev_date }}" class="nav-btn">◀ אתמול</a>
+    <div style="text-align:center">
+      <div class="day-name">{{ selected_date.strftime('%d/%m/%Y') }}</div>
+      <div class="day-date">{% if selected_date == today %}היום{% endif %}</div>
+      {% if selected_date != today %}
+      <a href="/manager" class="today-btn">📅 היום</a>
+      {% endif %}
+    </div>
+    <a href="/manager?date={{ next_date }}" class="nav-btn">מחר ▶</a>
+  </div>
+</div>
+
+<div class="tabs">
+  <span class="tab active" onclick="showTab('overview')">🏠 מסך ראשי</span>
+  <span class="tab" id="tab-btn-notifications" onclick="showTab('notifications')"><span id="notif-bell">🔔</span> התראות <span id="notif-tab-badge" style="display:none;background:#dc2626;color:white;border-radius:10px;padding:2px 8px;font-size:12px;font-weight:800;vertical-align:middle"></span></span>
+  <span class="tab" onclick="showTab('visits')">📋 ביקורים</span>
+  <span class="tab" onclick="showTab('reports')">📁 דוחות</span>
+  <span class="tab" onclick="toggleMgrSearch()" id="mgrSearchTab" style="flex-shrink:0">🔍 חיפוש</span>
+</div>
+<div id="mgrSearchBar" style="display:none;padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--border)">
+  <div class="search-wrap" style="margin:0">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="customerSearch" type="text" placeholder="חיפוש לקוח..." autocomplete="off" oninput="searchCustomers(this.value)">
+  </div>
+  <div id="mgrSearchResults" style="margin-top:8px"></div>
+</div>
+
+<div class="content">
+
+  <!-- OVERVIEW -->
+  <div id="tab-overview">
+
+    {% if eod_reports %}
+    <div style="margin-bottom:20px">
+      <div class="eod-title">📋 דוחות סוף יום</div>
+      {% for rpt in eod_reports %}
+      {% set lines = rpt.message.split('\n') %}
+      {% set agent_line = lines[0] if lines else '' %}
+      {% set stats_lines = [] %}
+      {% set visited_stores = [] %}
+      {% set partial_stores = [] %}
+      {% set missed_stores  = [] %}
+      {% for line in lines[1:] %}
+        {% set ls = line.strip() %}
+        {% if ls.startswith('✓') %}
+          {% set _ = visited_stores.append(ls[1:].strip()) %}
+        {% elif ls.startswith('⏳') %}
+          {% set _ = partial_stores.append(ls[1:].strip()) %}
+        {% elif ls.startswith('•') %}
+          {% set _ = missed_stores.append(ls[1:].strip()) %}
+        {% elif ls %}
+          {% set _ = stats_lines.append(ls) %}
+        {% endif %}
+      {% endfor %}
+      <div class="eod-card">
+        <div class="eod-card-header">
+          <div class="eod-card-title">📋 {{ agent_line }}</div>
+          <div class="eod-card-date">{{ selected_date.strftime('%d/%m/%Y') }}</div>
+        </div>
+        <div class="eod-card-body">
+          <!-- סטטיסטיקה -->
+          {% if stats_lines %}
+          <div class="eod-stats-row">
+            {% for st in stats_lines %}
+            {% if '✅' in st or 'הושלמו' in st %}
+            <div class="eod-stat ok">
+              <div class="eod-stat-val">{{ st.replace('✅','').replace('הושלמו:','').strip() }}</div>
+              <div class="eod-stat-lbl">✅ הושלמו</div>
+            </div>
+            {% elif '🟡' in st or 'בפנים' in st %}
+            <div class="eod-stat warn">
+              <div class="eod-stat-val">{{ st.replace('🟡','').replace('עדיין בפנים:','').strip() }}</div>
+              <div class="eod-stat-lbl">🟡 עדיין בפנים</div>
+            </div>
+            {% else %}
+            <div class="eod-stat">
+              <div class="eod-stat-val" style="font-size:12px">{{ st }}</div>
+            </div>
+            {% endif %}
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <!-- רשימת כל הלקוחות -->
+          {% set all_stores = visited_stores|length + partial_stores|length + missed_stores|length %}
+          {% if all_stores > 0 %}
+          <div class="eod-stores-title" onclick="var el=this.nextElementSibling;el.style.display=el.style.display==='none'?'flex':'none'">
+            <span>📍 רשימת לקוחות ({{ all_stores }})</span>
+            <span style="font-size:12px;color:var(--muted)">לחץ להצגה ▾</span>
+          </div>
+          <div class="eod-stores-list" style="display:none">
+            {% for s in visited_stores %}
+            <div class="eod-store-row visited"><span class="eod-store-icon">✅</span>{{ s }}</div>
+            {% endfor %}
+            {% for s in partial_stores %}
+            <div class="eod-store-row partial"><span class="eod-store-icon">⏳</span>{{ s }}</div>
+            {% endfor %}
+            {% for s in missed_stores %}
+            <div class="eod-store-row missed"><span class="eod-store-icon">❌</span>{{ s }}</div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="section-title">סוכנים</div>
+    <div class="agent-grid">
+      {% for agent in agent_summary %}
+      <a href="/manager/agent/{{ agent.id }}?date={{ selected_date_str }}" class="agent-card agent-{{ agent.username }}"
+         data-agent-id="{{ agent.id }}" data-date="{{ selected_date_str }}"
+         data-done="{{ agent.done_count }}" data-active="{{ agent.active_count }}" data-red="{{ agent.not_visited_count }}">
+        <div class="agent-name">{{ agent.name }}</div>
+        <div class="agent-region">{{ agent.regions }}</div>
+        <div style="display:inline-flex;align-items:center;gap:4px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:#1e40af;margin-bottom:12px">👥 {{ agent.total_customers }} לקוחות</div>
+        {% set pct = (agent.today_visits / agent.total_customers * 100) if agent.total_customers > 0 else 0 %}
+        {% if pct < 30 %}{% set pcls = 'progress-red' %}
+        {% elif pct < 60 %}{% set pcls = 'progress-orange' %}
+        {% elif pct < 90 %}{% set pcls = 'progress-green' %}
+        {% else %}{% set pcls = 'progress-gold' %}{% endif %}
+        <div class="agent-visits {{ pcls }}" id="agent-visits-{{ agent.id }}" data-total="{{ agent.total_customers }}">{% if pct >= 90 and agent.total_customers > 0 %}👑 {% endif %}{{ agent.today_visits }}/{{ agent.total_customers }}</div>
+        <div class="agent-visits-lbl">ביקורים <strong style="font-size:13px;color:#1e40af;">היום</strong></div>
+        <div class="agent-active" id="agent-active-{{ agent.id }}" {% if not agent.current_store %}style="display:none"{% endif %}>🟢 כרגע ב: {{ agent.current_store.store_name if agent.current_store else '' }}</div>
+      </a>
+      {% endfor %}
+    </div>
+
+    <!-- PUSH STATUS BAR — always visible -->
+<div id="push-ios-guide" style="display:none;margin:10px 0;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 12px;font-size:12px;color:#92400e;line-height:1.8">
+  1. לחץ ⎙ בתחתית ספארי<br>
+  2. בחר <b>"הוסף למסך הבית"</b><br>
+  3. פתח {{ cfg.company_name }} <b>מהמסך הבית</b><br>
+  4. לחץ "בדיקת התראות"
+</div>
+
+
+  </div>
+
+  <!-- NOTIFICATIONS — הודעות מסוכנים בלבד -->
+  <div id="tab-notifications" style="display:none">
+
+    <!-- סינון לפי סוכן -->
+    <div class="agent-filter-tabs">
+      <button class="agent-filter-btn active" onclick="setNotifAgent('', this)">👥 כולם</button>
+      {% for a in agents %}
+      <button class="agent-filter-btn" onclick="setNotifAgent('{{ a.name }}', this)">{{ a.name }}</button>
+      {% endfor %}
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="section-title" id="notif-section-title">💬 הודעות מסוכנים</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="deleteAllNotifs()" style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px;font-family:inherit;font-weight:600">🗑️ מחק הכל</button>
+        <button onclick="refreshNotifs()" style="background:var(--card);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px;font-family:inherit">🔄 רענן</button>
+      </div>
+    </div>
+
+    <div id="notif-list">
+      <div class="empty-state">טוען הודעות...</div>
+    </div>
+  </div>
+
+  <!-- VISITS -->
+  <div id="tab-visits" style="display:none">
+    <div class="section-title" style="margin-bottom:14px">כל הביקורים</div>
+    {% if visits %}
+    <div style="overflow-x:auto">
+    <table class="visits-table">
+      <tr>
+        <th>סוכן</th><th>חנות</th><th>אזור</th><th>תאריך</th><th>כניסה</th><th>יציאה</th><th>שהייה</th><th>סוג</th><th>הערות</th>
+      </tr>
+      {% for v in visits %}
+      <tr>
+        <td><span class="agent-pill pill-{{ v.agent_username or 'ran' }}">{{ v.agent_name }}</span></td>
+        <td>{{ v.store_name }}</td>
+        <td style="font-size:11px;color:var(--muted)">{{ v.region }}</td>
+        <td style="font-size:12px;white-space:nowrap">{{ v.visit_date[8:10] }}/{{ v.visit_date[5:7] }}/{{ v.visit_date[:4] }}</td>
+        <td>{{ v.check_in_time[:5] if v.check_in_time else '—' }}</td>
+        <td>{{ v.check_out_time[:5] if v.check_out_time else '—' }}</td>
+        <td>{% if v.duration_minutes %}{{ v.duration_minutes }}ד'{% else %}—{% endif %}</td>
+        <td style="font-size:12px;text-align:center">{% if v.is_phone %}<span title="טלפוני" style="color:#c2410c">📞</span>{% else %}<span title="פרונטלי" style="color:#16a34a">🤝</span>{% endif %}</td>
+        <td style="max-width:120px;font-size:12px;color:var(--muted)">{{ v.notes or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    </div>
+    {% else %}
+    <div class="empty-state">אין ביקורים</div>
+    {% endif %}
+  </div>
+
+  <!-- REPORTS -->
+  <div id="tab-reports" style="display:none">
+    <div class="section-title" style="margin-bottom:16px">📁 הפקת דוחות אקסל</div>
+
+    <!-- דוח סידור עבודה חודשי -->
+    <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,50,125,0.06)">
+      <div style="font-size:14px;font-weight:700;color:var(--primary);margin-bottom:14px">📅 דוח סידור עבודה חודשי</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">דוח אקסל עם לקוחות מתוכננים לכל עובד לאורך החודש — sheet נפרד לכל סוכן + גיליון סיכום</div>
+      <div style="display:flex;gap:10px;align-items:flex-end">
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px">חודש</div>
+          <input type="month" id="schedule-month" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;color:var(--text);background:#f8fafc" value="{{ today.strftime('%Y-%m') }}">
+        </div>
+        <button onclick="downloadSchedule()" style="padding:10px 22px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">📥 הורד דוח</button>
+      </div>
+    </div>
+
+    <!-- דוח סוכנים (רב-בחירה) -->
+    <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,50,125,0.06)">
+      <div style="font-size:14px;font-weight:700;color:var(--primary);margin-bottom:14px">👤 דוח היסטוריית סוכנים</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:12px;font-weight:600;color:var(--muted)">בחר סוכנים (כל סוכן = sheet נפרד)</div>
+            <div style="display:flex;gap:6px">
+              <button onclick="selectAllAgents(true)" style="font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;cursor:pointer;font-family:inherit;color:var(--text)">בחר הכל</button>
+              <button onclick="selectAllAgents(false)" style="font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;cursor:pointer;font-family:inherit;color:var(--text)">נקה</button>
+            </div>
+          </div>
+          <div id="rep-agent-checks" style="display:flex;flex-direction:column;gap:6px">
+            {% for a in agents %}
+            <label style="display:flex;align-items:center;gap:10px;padding:9px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#f8fafc;font-size:14px;font-weight:600;color:var(--text)">
+              <input type="checkbox" class="rep-agent-cb" value="{{ a.id }}" style="width:17px;height:17px;accent-color:#00327d;cursor:pointer">
+              {{ a.name }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px">מתאריך</div>
+            <input type="date" id="rep-agent-from" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;color:var(--text);background:#f8fafc">
+          </div>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px">עד תאריך</div>
+            <input type="date" id="rep-agent-to" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;color:var(--text);background:#f8fafc">
+          </div>
+        </div>
+        <div style="margin-top:4px">
+          <button onclick="downloadAgentReport()" style="width:100%;padding:15px;background:linear-gradient(135deg,#0057a8,#1a6fd4);color:white;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit">📥 הורד דוח</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- דוח לקוחות (רב-בחירה + חיפוש רשת) -->
+    <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 1px 4px rgba(0,50,125,0.06)">
+      <div style="font-size:14px;font-weight:700;color:var(--primary);margin-bottom:14px">🏪 דוח היסטוריית לקוחות</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="position:relative">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:12px;font-weight:600;color:var(--muted)">חפש וסמן לקוחות/סניפים (כל אחד = sheet נפרד)</div>
+            <div style="display:flex;gap:6px">
+              <button onclick="downloadCustomerReport()" style="font-size:11px;padding:4px 12px;background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700">📥 הורד</button>
+              <button onclick="_clearCustTags()" style="font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;cursor:pointer;font-family:inherit;color:var(--text)">נקה</button>
+            </div>
+          </div>
+          <!-- תגיות לקוחות נבחרים -->
+          <div id="rep-cust-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+          <input type="text" id="rep-customer-search" placeholder="הקלד שם לקוח או קוד לקוח..."
+            autocomplete="off"
+            style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;color:var(--text);background:#f8fafc;direction:rtl;box-sizing:border-box"
+            oninput="searchReportCustomers(this.value)"
+            onblur="setTimeout(()=>{document.getElementById('rep-customer-results').style.display='none'},200)">
+          <div id="rep-customer-results" style="display:none;position:absolute;top:100%;right:0;left:0;background:white;border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 16px rgba(0,50,125,0.1);z-index:100;max-height:220px;overflow-y:auto"></div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px">מתאריך</div>
+            <input type="date" id="rep-cust-from" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;color:var(--text);background:#f8fafc">
+          </div>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px">עד תאריך</div>
+            <input type="date" id="rep-cust-to" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;color:var(--text);background:#f8fafc">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- בדיקת חיבור SMTP -->
+    <div style="text-align:center;margin-top:4px">
+      <button onclick="testEmailConfig()"
+        style="padding:8px 18px;background:none;border:1px solid #cbd5e1;border-radius:8px;font-size:12px;color:#64748b;cursor:pointer;font-family:inherit">
+        🔍 בדוק חיבור מייל
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- HISTORY PANEL -->
+<div class="hist-overlay" id="histOverlay" onclick="if(event.target===this)closeHist()">
+  <div class="hist-panel">
+    <div class="hist-header">
+      <div class="hist-title" id="histTitle">📋 היסטוריית ביקורים</div>
+      <button class="hist-close" onclick="closeHist()">✕</button>
+    </div>
+    <div class="hist-body" id="histBody">
+      <div class="hist-empty">טוען...</div>
+    </div>
+  </div>
+</div>
+
+<!-- CHAT PANEL -->
+<div class="chat-overlay" id="chatOverlay" onclick="onOverlayClick(event)">
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-panel-header">
+      <div>
+        <div class="chat-panel-title" id="chatPanelTitle">💬 שיחה</div>
+        <div class="chat-panel-sub" id="chatPanelSub"></div>
+      </div>
+      <button class="chat-close" onclick="closeChat()">✕</button>
+    </div>
+    <div class="notes-banner" id="notesBanner" style="display:none">
+      <strong>📝 הערות הסוכן:</strong>
+      <span id="notesText"></span>
+    </div>
+    <div class="chat-messages-wrap" id="chatMessages">
+      <div class="chat-empty-msg" id="chatEmpty">טוען הודעות...</div>
+    </div>
+    <div class="chat-input-area">
+      <button class="chat-send-btn" onclick="sendManagerComment()">➤</button>
+      <input class="chat-text-input" id="chatInput" type="text" placeholder="כתוב תגובה..." onkeydown="if(event.key==='Enter') sendManagerComment()">
+    </div>
+  </div>
+</div>
+
+<!-- MANAGER GENERAL CHAT PANEL -->
+<div class="chat-overlay" id="mgcOverlay" onclick="if(event.target===this)closeMgc()">
+  <div class="chat-panel">
+    <div id="mgcPicker">
+      <div class="chat-panel-header">
+        <div class="chat-panel-title">💬 שיחה עם סוכן</div>
+        <button class="chat-close" onclick="closeMgc()">✕</button>
+      </div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+        {% for a in agents %}
+        <button id="mgc-agent-btn-{{ a.id }}" onclick="mgcSelectAgent({{ a.id }},'{{ a.name }}')"
+                style="background:white;color:var(--primary);border:2px solid var(--border);border-radius:14px;padding:14px 18px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;text-align:right;direction:rtl;transition:all 0.2s">
+          👤 {{ a.name }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+    <div id="mgcScreen" style="display:none;flex:1;flex-direction:column;min-height:0">
+      <div class="chat-panel-header">
+        <div>
+          <div class="chat-panel-title" id="mgcTitle">💬 שיחה</div>
+          <button onclick="mgcBack()" style="background:rgba(255,255,255,0.15);border:none;color:white;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;margin-top:6px;font-family:inherit">◀ בחר סוכן</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="mgcDeleteAll()" style="background:rgba(220,38,38,0.3);border:1px solid rgba(220,38,38,0.5);color:white;border-radius:8px;padding:5px 11px;font-size:12px;cursor:pointer;font-family:inherit">🗑️ מחק הכל</button>
+          <button class="chat-close" onclick="closeMgc()">✕</button>
+        </div>
+      </div>
+      <div class="chat-messages-wrap" id="mgcMessages"><div class="chat-empty-msg">טוען...</div></div>
+      <div class="chat-input-area">
+        <button class="chat-send-btn" onclick="mgcSend()">➤</button>
+        <input class="chat-text-input" id="mgcInput" type="text" placeholder="כתוב הודעה לסוכן..."
+               onkeydown="if(event.key==='Enter') mgcSend()">
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <button class="bar-btn btn-ghost" onclick="sessionStorage.removeItem('managerTab');showTab('overview')">🏠 ראשי</button>
+  <button id="mgc-btn" class="bar-btn btn-ghost" onclick="openMgc()">💬 צ'אט <span id="mgc-badge" style="display:none;background:#dc2626;color:white;border-radius:10px;padding:1px 7px;font-size:12px;font-weight:800;vertical-align:middle;margin-right:3px"></span></button>
+  <a href="/manager?date={{ today }}" class="bar-btn btn-primary">📅 היום</a>
+  <a href="/manager/history" class="bar-btn btn-refresh">📋 היסטוריית ביקורים</a>
+<button class="bar-btn btn-ghost" onclick="location.reload()">🔄 רענן</button>
+</div>
+
+<!-- NEW MESSAGE POPUP -->
+<div id="newMsgPopup" onclick="onPopupClick()" style="display:none;position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;background:linear-gradient(135deg,#1e40af,#2563eb);color:white;border-radius:16px;padding:14px 20px;box-shadow:0 8px 32px rgba(30,64,175,0.45);cursor:pointer;max-width:340px;width:90%;animation:slideDown 0.3s ease;direction:rtl">
+  <div style="font-size:13px;font-weight:800;margin-bottom:4px">💬 הודעה חדשה מסוכן</div>
+  <div id="newMsgText" style="font-size:14px;opacity:0.92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+  <div id="newMsgSub" style="font-size:11px;opacity:0.7;margin-top:3px"></div>
+</div>
+<style>
+@keyframes slideDown { from{transform:translateX(-50%) translateY(-20px);opacity:0} to{transform:translateX(-50%) translateY(0);opacity:1} }
+@keyframes pulseRed { 0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0.6)} 60%{box-shadow:0 0 0 8px rgba(220,38,38,0)} }
+.notif-tab-red { background:#dc2626 !important; color:#fff !important; border-radius:8px; animation:pulseRed 1.4s infinite; padding:13px 14px; margin-bottom:-1px; border-bottom:2px solid #dc2626 !important; }
+.beep-btn { padding:7px 13px; border:1.5px solid var(--border); border-radius:20px; background:#fff; font-size:12px; font-weight:600; color:var(--text); cursor:pointer; font-family:inherit; transition:all .15s; }
+.beep-btn:hover { border-color:#3b82f6; color:#1e40af; }
+.beep-btn.beep-selected { background:#1e40af; border-color:#1e40af; color:#fff; }
+</style>
+
+<script>
+// ── BEEP SOUNDS ──────────────────────────────────────────────────────────────
+// מייצר WAV PCM מ-samples ומחזיר Blob URL — עובד על iOS ללא הגבלת user-gesture
+function _samplesToWavUrl(samples, sampleRate) {
+  const len = samples.length, buf = new ArrayBuffer(44 + len*2), view = new DataView(buf);
+  const wr = (o,s) => { for(let i=0;i<s.length;i++) view.setUint8(o+i,s.charCodeAt(i)); };
+  wr(0,'RIFF'); view.setUint32(4,36+len*2,true); wr(8,'WAVE'); wr(12,'fmt ');
+  view.setUint32(16,16,true); view.setUint16(20,1,true); view.setUint16(22,1,true);
+  view.setUint32(24,sampleRate,true); view.setUint32(28,sampleRate*2,true);
+  view.setUint16(32,2,true); view.setUint16(34,16,true); wr(36,'data');
+  view.setUint32(40,len*2,true);
+  for(let i=0;i<len;i++) view.setInt16(44+i*2, Math.max(-32768,Math.min(32767,samples[i]*32767)),true);
+  return URL.createObjectURL(new Blob([buf],{type:'audio/wav'}));
+}
+
+function _makeSiren(sr) {
+  const dur=6, n=dur*sr, s=new Float32Array(n);
+  for(let i=0;i<n;i++){
+    const t=i/sr, cycle=t%3, phase=cycle<1.5?cycle/1.5:1-(cycle-1.5)/1.5;
+    const freq=300+800*phase, acc=(i===0?0:s._ph||0)+(2*Math.PI*freq/sr);
+    s[i]=Math.sin(acc)*0.9; s._ph=acc%(2*Math.PI);
+  }
+  // חישוב מחדש נקי
+  let ph=0;
+  for(let i=0;i<n;i++){
+    const t=i/sr,cycle=t%3,phase=cycle<1.5?cycle/1.5:1-(cycle-1.5)/1.5;
+    const freq=300+800*phase; ph+=2*Math.PI*freq/sr;
+    s[i]=Math.sin(ph)*0.9;
+  }
+  return s;
+}
+function _makeBeep1(sr){const n=sr*0.4,s=new Float32Array(n);for(let i=0;i<n;i++){const env=Math.exp(-i/(sr*0.15));s[i]=Math.sin(2*Math.PI*880*i/sr)*env*0.7;}return s;}
+function _makeBeep2(sr){const n=sr*0.5,s=new Float32Array(n);[[0,0.15],[0.2,0.15]].forEach(([st,d])=>{for(let i=Math.floor(st*sr);i<Math.floor((st+d)*sr)&&i<n;i++){const env=Math.exp(-(i-st*sr)/(sr*0.05));s[i]=Math.sin(2*Math.PI*660*i/sr)*env*0.6;}});return s;}
+function _makeBeep3(sr){const n=sr*0.9,s=new Float32Array(n);[[0,440],[0.3,550],[0.6,660]].forEach(([st,f])=>{for(let i=Math.floor(st*sr);i<Math.floor((st+0.25)*sr)&&i<n;i++){const env=Math.exp(-(i-st*sr)/(sr*0.08));s[i]=Math.sin(2*Math.PI*f*i/sr)*env*0.6;}});return s;}
+
+const SR = 22050;
+const BEEP_WAVS = {};
+function _ensureWav(id) {
+  if (BEEP_WAVS[id]) return;
+  const fns = {1:_makeBeep1,2:_makeBeep2,3:_makeBeep3,4:_makeSiren};
+  if (fns[id]) BEEP_WAVS[id] = _samplesToWavUrl(fns[id](SR), SR);
+}
+
+let _selectedBeep = 4;
+let _beepAudio = null;
+
+function playBeep(id) {
+  const beepId = id || _selectedBeep;
+  if (beepId === 5) return;
+  _ensureWav(beepId);
+  const url = BEEP_WAVS[beepId];
+  if (!url) return;
+  try {
+    if (_beepAudio) { _beepAudio.pause(); _beepAudio.currentTime = 0; }
+    _beepAudio = new Audio(url);
+    _beepAudio.volume = 1.0;
+    _beepAudio.play().catch(()=>{});
+  } catch(e) {}
+}
+
+// מקדם-טוען את הצלילים בלחיצה ראשונה (iOS דורש)
+function _preloadBeeps() {
+  [1,2,3,4].forEach(id => _ensureWav(id));
+}
+['touchstart','mousedown'].forEach(ev =>
+  document.addEventListener(ev, _preloadBeeps, {once:true, passive:true})
+);
+
+async function selectBeep(id) {
+  _selectedBeep = id;
+  document.querySelectorAll('.beep-btn').forEach(b => b.classList.remove('beep-selected'));
+  document.getElementById('beep-btn-'+id)?.classList.add('beep-selected');
+  playBeep(id);
+  try { await fetch('/api/manager/beep', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({beep:id})}); } catch(e) {}
+}
+async function loadBeepSetting() {
+  try {
+    const r = await fetch('/api/manager/beep');
+    const d = await r.json();
+    _selectedBeep = d.beep || 4;
+    document.querySelectorAll('.beep-btn').forEach(b => b.classList.remove('beep-selected'));
+    document.getElementById('beep-btn-'+_selectedBeep)?.classList.add('beep-selected');
+  } catch(e) {}
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _lastPopupMsg = null;
+function toggleMgrSearch() {
+  const bar = document.getElementById('mgrSearchBar');
+  const tab = document.getElementById('mgrSearchTab');
+  const isOpen = bar.style.display !== 'none';
+  bar.style.display = isOpen ? 'none' : 'block';
+  tab.classList.toggle('active', !isOpen);
+  if (!isOpen) {
+    setTimeout(() => document.getElementById('customerSearch').focus(), 50);
+  } else {
+    document.getElementById('customerSearch').value = '';
+    document.getElementById('mgrSearchResults').innerHTML = '';
+  }
+}
+
+function showTab(name) {
+  ['overview','notifications','visits','reports'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t === name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach((el, i) => {
+    el.classList.toggle('active', ['overview','notifications','visits','reports'][i] === name);
+  });
+  // close search bar when switching tabs
+  const sb = document.getElementById('mgrSearchBar');
+  const st = document.getElementById('mgrSearchTab');
+  if (sb) { sb.style.display = 'none'; }
+  if (st) { st.classList.remove('active'); }
+  sessionStorage.setItem('managerTab', name);
+  if (name === 'notifications') refreshNotifs();
+}
+
+// ── REPORTS ──────────────────────────────────────────────────────
+function toggleEmailForm(type) {
+  const form = document.getElementById(`email-form-${type}`);
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  if (form.style.display === 'block')
+    setTimeout(() => document.getElementById(`email-input-${type}`).focus(), 100);
+}
+
+async function sendEmailReport(type) {
+  const fromDate = document.getElementById(type === 'agent' ? 'rep-agent-from' : 'rep-cust-from').value;
+  const toDate   = document.getElementById(type === 'agent' ? 'rep-agent-to'   : 'rep-cust-to').value;
+  const email    = document.getElementById(`email-input-${type}`).value.trim();
+  if (!fromDate) { alert('יש להזין תאריך התחלה'); return; }
+  if (!toDate)   { alert('יש להזין תאריך סיום');  return; }
+  if (!email)    { alert('יש להזין כתובת מייל');  return; }
+  const body = { type, from_date: fromDate, to_date: toDate, email };
+  if (type === 'agent') {
+    const ids = [...document.querySelectorAll('.rep-agent-cb:checked')].map(cb => parseInt(cb.value));
+    if (!ids.length) { alert('יש לבחור לפחות סוכן אחד'); return; }
+    body.agent_ids = ids.join(',');
+  } else {
+    const ids = Object.keys(_selCusts);
+    if (!ids.length) { alert('יש לבחור לפחות לקוח אחד'); return; }
+    body.customer_ids = ids.join(',');
+  }
+  const btn = document.getElementById(`email-btn-${type}`);
+  btn.disabled = true; btn.textContent = '⏳ שולח...';
+  try {
+    const res  = await fetch('/api/report/email', {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    let data;
+    try { data = await res.json(); } catch(je) {
+      const txt = await res.text().catch(()=>'');
+      alert(`❌ שגיאה — השרת החזיר תגובה לא תקינה (${res.status}):\n${txt.slice(0,300)}`);
+      btn.disabled = false; btn.textContent = '📨 שלח דוח'; return;
+    }
+    if (data.status === 'ok') {
+      alert(`✅ ${data.message}`);
+      document.getElementById(`email-form-${type}`).style.display = 'none';
+    } else {
+      const detail = data.raw ? `\n\nפרטים: ${data.raw}` : '';
+      alert(`❌ שגיאה:\n${data.error || JSON.stringify(data)}${detail}`);
+    }
+  } catch(e) { alert('❌ שגיאה בשליחה: ' + e.message); }
+  btn.disabled = false; btn.textContent = '📨 שלח דוח';
+}
+
+async function testEmailConfig() {
+  try {
+    const res  = await fetch('/api/test-email-config');
+    const data = await res.json();
+    let msg = `🔍 בדיקת הגדרות מייל:\n\n`;
+    msg += `MAIL_FROM: ${data.MAIL_FROM_value || '(ריק)'}\n`;
+    msg += `MAIL_PASSWORD: ${data.MAIL_PASSWORD_set ? '✅ מוגדר' : '❌ חסר'}\n`;
+    msg += `חיבור SMTP: ${data.smtp_test || '?'}`;
+    alert(msg);
+  } catch(e) { alert('שגיאה בבדיקה: ' + e.message); }
+}
+
+function selectAllAgents(sel) {
+  document.querySelectorAll('.rep-agent-cb').forEach(cb => cb.checked = sel);
+}
+
+function downloadSchedule() {
+  const m = document.getElementById('schedule-month').value;
+  if (!m) { alert('יש לבחור חודש'); return; }
+  window.location.href = `/manager/report/schedule?month=${m}`;
+}
+
+function downloadAgentReport() {
+  const ids      = [...document.querySelectorAll('.rep-agent-cb:checked')].map(cb => cb.value);
+  const fromDate = document.getElementById('rep-agent-from').value;
+  const toDate   = document.getElementById('rep-agent-to').value;
+  if (!ids.length) { alert('יש לבחור לפחות סוכן אחד'); return; }
+  if (!fromDate)   { alert('יש להזין תאריך התחלה'); return; }
+  if (!toDate)     { alert('יש להזין תאריך סיום'); return; }
+  window.location.href = `/manager/report/agents?agent_ids=${ids.join(',')}&from_date=${fromDate}&to_date=${toDate}`;
+}
+
+// ── לקוחות רב-בחירה ────────────────────────────────────────────
+const _selCusts = {}; // { id: {name, city} }
+
+function _renderCustTags() {
+  const div = document.getElementById('rep-cust-tags');
+  const entries = Object.entries(_selCusts);
+  if (!entries.length) { div.innerHTML = ''; return; }
+  div.innerHTML = entries.map(([id, d]) =>
+    `<span style="display:inline-flex;align-items:center;gap:4px;padding:5px 11px;background:#e0eaff;border:1px solid #b0c8f0;border-radius:20px;font-size:12px;font-weight:600;color:#00327d">
+      ${escHtml(d.name)}${d.city ? ' – ' + escHtml(d.city) : ''}
+      <button onclick="removeReportCustomer(${id})" style="background:none;border:none;cursor:pointer;font-size:15px;color:#64748b;line-height:1;padding:0 2px;margin-right:2px">×</button>
+    </span>`
+  ).join('');
+}
+
+function addReportCustomer(id, name, city) {
+  _selCusts[id] = {name, city};
+  _renderCustTags();
+  document.getElementById('rep-customer-search').value = '';
+  document.getElementById('rep-customer-results').style.display = 'none';
+}
+
+function removeReportCustomer(id) {
+  delete _selCusts[id];
+  _renderCustTags();
+}
+
+function _syncResultCheckboxes() {
+  document.querySelectorAll('#rep-customer-results label').forEach(label => {
+    const cb = label.querySelector('input[type=checkbox]');
+    if (!cb) return;
+    const m = (cb.getAttribute('onclick') || '').match(/toggleReportCustomer\((\d+)/);
+    if (!m) return;
+    const selected = !!_selCusts[m[1]];
+    cb.checked = selected;
+    label.style.background = selected ? '#f0fff4' : '';
+  });
+}
+
+function _clearCustTags() {
+  Object.keys(_selCusts).forEach(k => delete _selCusts[k]);
+  _renderCustTags();
+  _syncResultCheckboxes();
+}
+
+function downloadCustomerReport() {
+  const ids      = Object.keys(_selCusts);
+  const fromDate = document.getElementById('rep-cust-from').value;
+  const toDate   = document.getElementById('rep-cust-to').value;
+  if (!ids.length) { alert('יש לבחור לפחות לקוח אחד'); return; }
+  if (!fromDate)   { alert('יש להזין תאריך התחלה'); return; }
+  if (!toDate)     { alert('יש להזין תאריך סיום'); return; }
+  window.location.href = `/manager/report/customers?customer_ids=${ids.join(',')}&from_date=${fromDate}&to_date=${toDate}`;
+}
+
+let _custTimer = null;
+async function searchReportCustomers(q) {
+  clearTimeout(_custTimer);
+  const results = document.getElementById('rep-customer-results');
+  if (q.length < 1) { results.style.display='none'; return; }
+  _custTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`/api/search-customers?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      if (!data.results || !data.results.length) {
+        results.innerHTML = '<div style="padding:10px 14px;color:var(--muted);font-size:13px">לא נמצאו תוצאות</div>';
+      } else {
+        results.innerHTML = data.results.map(c =>
+          `<label style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:14px;${_selCusts[c.id]?'background:#f0fff4':''}">
+            <input type="checkbox" ${_selCusts[c.id]?'checked':''} onclick="toggleReportCustomer(${c.id},'${escHtml(c.name)}','${escHtml(c.city||'')}')"
+                   style="width:17px;height:17px;accent-color:#059669;cursor:pointer;flex-shrink:0">
+            <span style="flex:1">
+              <strong>${escHtml(c.name)}</strong>
+              <span style="color:var(--muted);margin-right:6px;font-size:12px">${c.city||''}</span>
+              <span style="color:var(--muted);font-size:11px">${c.card_code||''}</span>
+            </span>
+          </label>`
+        ).join('');
+      }
+      results.style.display = 'block';
+    } catch(e) {}
+  }, 250);
+}
+
+function toggleReportCustomer(id, name, city) {
+  if (_selCusts[id]) { delete _selCusts[id]; } else { _selCusts[id] = {name, city}; }
+  _renderCustTags();
+  _syncResultCheckboxes();
+}
+
+// set default dates: first day of current month → today
+(function() {
+  const now  = new Date();
+  const yyyy = now.getFullYear();
+  const mm   = String(now.getMonth()+1).padStart(2,'0');
+  const dd   = String(now.getDate()).padStart(2,'0');
+  const today     = `${yyyy}-${mm}-${dd}`;
+  const firstDay  = `${yyyy}-${mm}-01`;
+  ['rep-agent-from','rep-cust-from'].forEach(id => { const el = document.getElementById(id); if(el) el.value = firstDay; });
+  ['rep-agent-to','rep-cust-to'].forEach(id => { const el = document.getElementById(id); if(el) el.value = today; });
+})();
+
+let activeNotifAgent = '';
+
+function setNotifAgent(agentName, btn) {
+  activeNotifAgent = agentName;
+  document.querySelectorAll('.agent-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const title = document.getElementById('notif-section-title');
+  title.textContent = agentName ? `התראות — ${agentName}` : 'התראות אחרונות';
+  refreshNotifs();
+}
+
+async function refreshNotifs() {
+  try {
+    const url = activeNotifAgent
+      ? `/api/agent-messages?agent=${encodeURIComponent(activeNotifAgent)}`
+      : '/api/agent-messages';
+    const res = await fetch(url);
+    const data = await res.json();
+    const list = document.getElementById('notif-list');
+    if (!list) return;
+    if (!data.messages || !data.messages.length) {
+      list.innerHTML = `<div class="empty-state">אין הודעות${activeNotifAgent ? ' מ' + activeNotifAgent : ''}</div>`;
+      return;
+    }
+    list.innerHTML = data.messages.map(m => {
+      const store   = m.store_name || 'כללי';
+      const date    = m.created_at ? m.created_at.slice(0,10) : '';
+      const time    = m.created_at ? m.created_at.slice(11,16) : '';
+      const unread  = !m.is_read || m.is_read == 0;
+      const isGenChat = m.customer_id == 0;
+      const bg      = unread ? '#fef2f2' : 'white';
+      const border  = unread ? '#dc2626' : '#3b82f6';
+      // צ'אט כללי — פותח MGC עם fromNotif=true (סגירה לא תסמן כנקרא)
+      const clickFn = isGenChat
+        ? `openMgc(true);mgcSelectAgent(${m.user_id},'${escHtml(m.user_name)}')`
+        : `openChat(${m.customer_id},'${m.visit_date}','${escHtml(store)}','${escHtml(m.user_name)}','')`;
+      return `<div class="notif-item" style="background:${bg};border-right:4px solid ${border};flex-direction:column;gap:8px">
+        <div style="cursor:pointer;width:100%"
+             onclick="${clickFn}">
+          <div class="notif-msg" style="font-weight:700">${escHtml(m.user_name)} <span style="font-weight:400;color:var(--muted);font-size:12px">— ${escHtml(store)}</span></div>
+          <div style="font-size:13px;color:var(--text);margin:3px 0">${escHtml(m.message)}</div>
+          <div class="notif-time">${date} ${time}</div>
+        </div>
+        <div style="border-top:1px solid #f1f5f9;padding-top:6px;display:flex;gap:8px">
+          <button onclick="${clickFn}"
+                  style="flex:2;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:8px;padding:5px 16px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:600">
+            💬 השב
+          </button>
+          <button onclick="deleteNotif(${m.id})"
+                  style="flex:1;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:8px;padding:5px 16px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:600">
+            🗑️ מחק
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    const list = document.getElementById('notif-list');
+    if (list) list.innerHTML = '<div class="empty-state">שגיאה בטעינה — נסה שוב</div>';
+  }
+}
+
+function updateNotifBadge(count) {
+  const bell  = document.getElementById('notif-bell');
+  const badge = document.getElementById('notif-tab-badge');
+  if (count > 0) {
+    if (bell)  bell.textContent = '🔴';
+    badge.textContent = count;
+    badge.style.display = 'inline-block';
+  } else {
+    if (bell)  bell.textContent = '🔔';
+    badge.style.display = 'none';
+  }
+}
+
+async function deleteNotif(id) {
+  await fetch(`/api/agent-messages/${id}`, { method: 'DELETE' });
+  refreshNotifs();       // רענן טאב התראות
+  loadUnreadChats();     // רענן טאב סקירה
+}
+
+async function deleteAllNotifs() {
+  if (!confirm('למחוק את כל ההודעות?')) return;
+  await fetch('/api/agent-messages/clear-all', { method: 'DELETE' });
+  refreshNotifs();
+  loadUnreadChats();
+}
+
+let _prevUnreadCount = -1;
+
+async function pollUnreadCount() {
+  try {
+    const res = await fetch('/api/unread-count');
+    const data = await res.json();
+    const count = data.count || 0;
+    updateNotifBadge(count);
+
+    // הצג popup כשהספירה עלתה (לא בטעינה ראשונה)
+    if (_prevUnreadCount >= 0 && count > _prevUnreadCount) {
+      // שלוף הודעה אחרונה בלי לסמן כנקרא
+      try {
+        const r2 = await fetch('/api/agent-messages');
+        const d2 = await r2.json();
+        if (d2.messages && d2.messages.length) {
+          const m = d2.messages[0];
+          const msgKey = m.id + '_' + (m.created_at || '');
+          if (msgKey !== _lastPopupMsg) {
+            _lastPopupMsg = msgKey;
+            showNewMsgPopup(m);
+          }
+        }
+      } catch(e) {}
+    } else if (_prevUnreadCount < 0 && count > 0) {
+      // בטעינה ראשונה — אם יש הודעות ממתינות, הצג banner שקט (ללא popup)
+      updateNotifBadge(count);
+    }
+    _prevUnreadCount = count;
+  } catch(e) {}
+}
+
+function showNewMsgPopup(m) {
+  const popup = document.getElementById('newMsgPopup');
+  document.getElementById('newMsgText').textContent = m.message;
+  document.getElementById('newMsgSub').textContent = m.user_name + ' — ' + (m.store_name || '') + ' · ' + (m.created_at || '').slice(11,16);
+  popup._openData = m;
+  popup.style.display = 'block';
+  playBeep();
+  clearTimeout(popup._timer);
+  popup._timer = setTimeout(() => { popup.style.display = 'none'; }, 8000);
+}
+
+function onPopupClick() {
+  const popup = document.getElementById('newMsgPopup');
+  popup.style.display = 'none';
+  const m = popup._openData;
+  if (m && m.customer_id > 0) {
+    window.location.href = `/store/${m.customer_id}?date=${m.visit_date || ''}`;
+  } else if (m) {
+    // צ'אט כללי — פתח מה-popup, גם זה נחשב כ"מהתראות" — לא ישנה את 💬
+    openMgc(true);
+    mgcSelectAgent(m.user_id, m.user_name);
+  }
+}
+
+// Touch support for popup on tablets
+document.getElementById('newMsgPopup').addEventListener('touchend', function(e) {
+  e.preventDefault();
+  onPopupClick();
+});
+
+loadBeepSetting();
+
+pollUnreadCount();
+setInterval(pollUnreadCount, 4000);
+setInterval(refreshNotifs, 10000);
+
+// פתיחת צ'אט ישירות ע"פ URL params מהנוטיפיקציה
+async function handleNotifDeepLink(search) {
+  const p = new URLSearchParams(search);
+  const chatId = p.get('open_chat');
+  const vdate  = p.get('vdate');
+  const mgcId  = p.get('open_mgc');
+  const tab    = p.get('tab');
+
+  if (!chatId && !mgcId && tab !== 'notifications') return;
+
+  if (mgcId) {
+    // MGC: פתח ישירות את לוח בחירת הסוכן — הסוכן יופיע באדום
+    await pollMgcUnread();
+    openMgc();
+    return;
+  }
+
+  showTab('notifications');
+
+  if (chatId && vdate) {
+    try {
+      // נסה למצוא ב-unread-chats (יש שם גם שם סוכן)
+      const res  = await fetch('/api/unread-chats');
+      const data = await res.json();
+      const match = (data.items || []).find(item =>
+        String(item.customer_id) === chatId && item.visit_date === vdate
+      );
+      if (match) {
+        openChat(parseInt(chatId), vdate, match.store_name, match.agent_name, '');
+      } else {
+        // fallback: הצ'אט כבר נקרא — שלוף שם חנות ישירות
+        const nr = await fetch(`/api/customer-name/${chatId}`);
+        const nd = await nr.json();
+        openChat(parseInt(chatId), vdate, nd.name || `חנות #${chatId}`, '', '');
+      }
+    } catch(e) {}
+  }
+}
+
+// מקרה 1: SW שולח postMessage (אפליקציה ברקע, לאחר focus)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data && event.data.action === 'open-notif' && event.data.url) {
+      const urlObj = new URL(event.data.url, location.origin);
+      handleNotifDeepLink(urlObj.search);
+    }
+  });
+}
+// מקרה 2: אפליקציה נפתחה עם URL params (סגורה או navigate)
+(function() {
+  const search = location.search;
+  if (search) {
+    history.replaceState({}, '', '/manager');
+    handleNotifDeepLink(search);
+  }
+})();
+// מקרה 3: אפליקציה חזרה מ-bfcache (pageshow persisted) — IIFE לא רץ שוב
+window.addEventListener('pageshow', function(e) {
+  if (e.persisted && location.search) {
+    const search = location.search;
+    history.replaceState({}, '', '/manager');
+    handleNotifDeepLink(search);
+  }
+});
+
+// מקרה 4: אפליקציה ברקע (לחיצה על PUSH בזמן שימוש באפליקציה אחרת)
+// SW כתב את ה-URL ל-IndexedDB לפני focus — קוראים כשהדף חוזר לפורגראונד
+function idbReadPendingNav() {
+  return new Promise(resolve => {
+    try {
+      const req = indexedDB.open('app-nav', 1);
+      req.onupgradeneeded = e => e.target.result.createObjectStore('q');
+      req.onsuccess = e => {
+        const tx = e.target.result.transaction('q', 'readwrite');
+        const store = tx.objectStore('q');
+        const get = store.get('pending');
+        get.onsuccess = () => {
+          const url = get.result || null;
+          if (url) store.delete('pending');
+          resolve(url);
+        };
+        get.onerror = () => resolve(null);
+      };
+      req.onerror = () => resolve(null);
+    } catch(e) { resolve(null); }
+  });
+}
+async function checkPendingNav() {
+  const url = await idbReadPendingNav();
+  if (url) handleNotifDeepLink(new URL(url, location.origin).search);
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') checkPendingNav();
+});
+
+const _summaryDate = '{{ selected_date_str }}';
+// ── Donut Pie Chart ──────────────────────────────────────────────────────────
+function _ptCart(cx, cy, r, deg) {
+  const rad = (deg - 90) * Math.PI / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+function _arcPath(cx, cy, r, startDeg, endDeg) {
+  const s = _ptCart(cx, cy, r, startDeg);
+  const e = _ptCart(cx, cy, r, endDeg);
+  const large = endDeg - startDeg > 180 ? 1 : 0;
+  return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
+}
+function renderPie(card) {
+  const done   = +(card.dataset.done   || 0);
+  const active = +(card.dataset.active || 0);
+  const red    = +(card.dataset.red    || 0);
+  const total  = done + active + red;
+  const agentId = card.dataset.agentId;
+  const date    = card.dataset.date;
+  const container = document.getElementById('pie-' + agentId);
+  if (!container) return;
+
+  const cx = 44, cy = 44, R = 30, SW = 13;
+  if (total === 0) {
+    container.innerHTML = `<svg width="88" height="88" viewBox="0 0 88 88"><circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#e2e8f0" stroke-width="${SW}"/></svg>`;
+    return;
+  }
+
+  const segments = [
+    { count: done,   color: '#16a34a', status: 'done',   label: 'הושלמו' },
+    { count: active, color: '#d4a000', status: 'active', label: 'בפנים' },
+    { count: red,    color: '#dc2626', status: 'red',    label: 'לא ביקרו' },
+  ].filter(s => s.count > 0);
+
+  let paths = '';
+  let cur = 0;
+  for (const seg of segments) {
+    const span = (seg.count / total) * 360;
+    const end  = cur + span;
+    // מניעת ציור עיגול מלא (360°) שנשבר ב-SVG
+    const clampedEnd = (span >= 359.99) ? cur + 359.98 : end;
+    const d = _arcPath(cx, cy, R, cur, clampedEnd);
+    const url = `/manager/agent/${agentId}?date=${date}&status=${seg.status}`;
+    paths += `<path d="${d}" fill="none" stroke="${seg.color}" stroke-width="${SW}" stroke-linecap="butt"
+      onclick="event.preventDefault();event.stopPropagation();location.href='${url}'"
+      style="cursor:pointer">
+      <title>${seg.label}: ${seg.count}</title></path>`;
+    cur = end;
+  }
+
+  const pct = Math.round(done / total * 100);
+  container.innerHTML = `<svg width="88" height="88" viewBox="0 0 88 88">
+    <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#e2e8f0" stroke-width="${SW}"/>
+    ${paths}
+    <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle"
+      font-size="11" font-weight="700" fill="#1e3a8a" font-family="Arial">${pct}%</text>
+  </svg>`;
+}
+document.querySelectorAll('.agent-card[data-agent-id]').forEach(renderPie);
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function refreshAgentCards() {
+  try {
+    const res = await fetch(`/api/manager-summary?date=${_summaryDate}`);
+    const data = await res.json();
+    if (!data.agents) return;
+    for (const a of data.agents) {
+      const visitsEl = document.getElementById(`agent-visits-${a.id}`);
+      if (visitsEl) {
+        const total = parseInt(visitsEl.dataset.total) || 0;
+        const pct = total > 0 ? (a.today_visits / total * 100) : 0;
+        const crown = (pct >= 90 && total > 0) ? '👑 ' : '';
+        visitsEl.textContent = `${crown}${a.today_visits}/${total}`;
+        visitsEl.classList.remove('progress-red','progress-orange','progress-green','progress-gold');
+        if (pct < 30) visitsEl.classList.add('progress-red');
+        else if (pct < 60) visitsEl.classList.add('progress-orange');
+        else if (pct < 90) visitsEl.classList.add('progress-green');
+        else visitsEl.classList.add('progress-gold');
+      }
+
+      const activeEl = document.getElementById(`agent-active-${a.id}`);
+      if (activeEl) {
+        if (a.current_store) {
+          activeEl.textContent = `🟢 כרגע ב: ${a.current_store}`;
+          activeEl.style.display = '';
+        } else {
+          activeEl.style.display = 'none';
+        }
+      }
+
+      // עדכון עוגה
+      const card = document.querySelector(`.agent-card[data-agent-id="${a.id}"]`);
+      if (card) {
+        card.dataset.done   = a.done_count   || 0;
+        card.dataset.active = a.active_count || 0;
+        card.dataset.red    = a.not_visited_count || 0;
+        renderPie(card);
+      }
+    }
+  } catch(e) {}
+}
+setInterval(refreshAgentCards, 10000);
+
+// הנוטיפיקציה הקופצת רק מביאה את האפליקציה לפוקוס — הסימון האדום יופיע מעצמו
+// המנהל נכנס לצ'אטים בזמנו
+
+setInterval(() => {
+  if (document.getElementById('chatOverlay').classList.contains('open')) loadManagerComments();
+}, 10000);
+setInterval(() => {
+  const chatOpen  = document.getElementById('chatOverlay').classList.contains('open');
+  const mgcOpen   = document.getElementById('mgcOverlay').classList.contains('open');
+  const isTyping  = ['INPUT','TEXTAREA'].includes((document.activeElement||{}).tagName);
+  const isReports = sessionStorage.getItem('managerTab') === 'reports';
+  if (!chatOpen && !mgcOpen && !isTyping && !isReports) location.reload();
+}, 60000);
+
+let currentCustomerId = null, currentVisitDate = null;
+
+function openChat(customerId, visitDate, storeName, agentName, notes) {
+  currentCustomerId = customerId; currentVisitDate = visitDate;
+  document.getElementById('chatPanelTitle').textContent = '💬 ' + storeName;
+  document.getElementById('chatPanelSub').textContent = agentName + ' · ' + visitDate;
+  const banner = document.getElementById('notesBanner');
+  if (notes && notes.trim()) {
+    document.getElementById('notesText').textContent = notes;
+    banner.style.display = 'block';
+  } else { banner.style.display = 'none'; }
+  document.getElementById('chatOverlay').classList.add('open');
+  document.getElementById('chatMessages').innerHTML = '<div class="chat-empty-msg" id="chatEmpty">טוען הודעות...</div>';
+  loadManagerComments();
+  setTimeout(() => document.getElementById('chatInput').focus(), 300);
+  // סמן הודעות החנות הזו כנקראו ורענן badge + רשימה
+  fetch('/api/mark-chat-read', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({customer_id: customerId, visit_date: visitDate})
+  }).then(() => { pollUnreadCount(); refreshNotifs(); }).catch(()=>{});
+}
+function closeChat() {
+  document.getElementById('chatOverlay').classList.remove('open');
+  currentCustomerId = null; currentVisitDate = null;
+}
+function onOverlayClick(e) { if (e.target === document.getElementById('chatOverlay')) closeChat(); }
+
+async function loadManagerComments() {
+  if (!currentCustomerId) return;
+  const res = await fetch(`/api/comments?customer_id=${currentCustomerId}&visit_date=${currentVisitDate}`);
+  const data = await res.json();
+  const box = document.getElementById('chatMessages');
+  if (!data.comments || !data.comments.length) {
+    box.innerHTML = '<div class="chat-empty-msg">אין הודעות עדיין — שלח תגובה ראשונה!</div>'; return;
+  }
+  box.innerHTML = data.comments.map(c => {
+    const isMgr  = c.user_role === 'manager';
+    const isMine = c.user_name === '{{ user.name }}';
+    return `<div class="chat-msg ${isMgr?'manager-msg':'agent-msg'} ${isMine?'mine':'theirs'}">
+      <div class="chat-bubble-name">${escHtml(c.user_name)}</div>
+      <div>${escHtml(c.message)}</div>
+      <div class="chat-meta">${c.created_at.slice(11,16)}</div>
+    </div>`;
+  }).join('');
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendManagerComment() {
+  const input = document.getElementById('chatInput');
+  const message = input.value.trim();
+  if (!message || !currentCustomerId) return;
+  input.value = '';
+  const res = await fetch('/api/comment', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({customer_id:currentCustomerId, visit_date:currentVisitDate, message})
+  });
+  if ((await res.json()).status === 'ok') await loadManagerComments();
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDate(dt) {
+  if (!dt) return '';
+  const d = dt.slice(0,10).split('-');
+  return d[2] + '/' + d[1] + '/' + d[0];
+}
+
+const SRCH_HEB_TO_JSDAY  = {'א':0,'ב':1,'ג':2,'ד':3,'ה':4,'ו':5,'ש':6};
+const SRCH_HEB_DAY_SHORT = {'א':'א׳ ראשון','ב':'ב׳ שני','ג':'ג׳ שלישי','ד':'ד׳ רביעי','ה':'ה׳ חמישי','ו':'ו׳ שישי','ש':'ש׳ שבת'};
+function srchGetNextDates(hebDay, n) {
+  n = n || 6;
+  const target = SRCH_HEB_TO_JSDAY[hebDay];
+  if (target === undefined) return [];
+  const dates = [];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = (target - today.getDay() + 7) % 7;
+  const d = new Date(today); d.setDate(today.getDate() + diff);
+  for (let i = 0; i < n; i++) { dates.push(new Date(d)); d.setDate(d.getDate() + 7); }
+  return dates;
+}
+function srchFmtDate(d) { return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; }
+function srchDateStr(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+function toggleSearchDates(card, custId, hebDay) {
+  const datesDiv = card.nextElementSibling;
+  const arrow = card.querySelector('.srch-card-arrow');
+  if (datesDiv.style.display !== 'none') {
+    datesDiv.style.display = 'none';
+    card.classList.remove('open');
+    if (arrow) arrow.textContent = '▼';
+    return;
+  }
+  const dates = srchGetNextDates(hebDay, 6);
+  if (!dates.length) {
+    datesDiv.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:8px 0">לא הוגדר יום ביקור ללקוח זה</div>';
+  } else {
+    datesDiv.innerHTML = dates.map(d => {
+      const ds = srchDateStr(d);
+      const label = `${SRCH_HEB_DAY_SHORT[hebDay] || ''} · ${srchFmtDate(d)}`;
+      return `<a class="srch-date-btn" href="/store/${custId}?date=${ds}">${label}</a>`;
+    }).join('');
+  }
+  datesDiv.style.display = 'flex';
+  card.classList.add('open');
+  if (arrow) arrow.textContent = '▲';
+}
+
+let searchTimer = null;
+async function searchCustomers(q) {
+  const results = document.getElementById('mgrSearchResults');
+  if (!q || q.length < 2) { results.innerHTML = ''; return; }
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`/api/customers/search?q=${encodeURIComponent(q)}`);
+      const items = await res.json();
+      if (!items.length) {
+        results.innerHTML = '<div class="srch-empty">לא נמצאו לקוחות</div>';
+      } else {
+        results.innerHTML = items.map(c => {
+          const hebDay = (c.assigned_visit_day || c.visit_day || '').trim();
+          return `
+            <div class="srch-card" onclick="toggleSearchDates(this,${c.id},'${hebDay}')">
+              <div style="flex:1">
+                <div class="srch-card-name">${escHtml(c.name)}</div>
+                <div class="srch-card-meta">${escHtml(c.city)}${c.region ? ' · ' + escHtml(c.region) : ''} · <span style="font-weight:700;color:var(--primary)">${escHtml(c.agent)}</span></div>
+              </div>
+              <div class="srch-card-arrow">▼</div>
+            </div>
+            <div class="srch-dates" style="display:none"></div>`;
+        }).join('');
+      }
+    } catch(e) {}
+  }, 300);
+}
+
+async function openHist(customerId, customerName) {
+  document.getElementById('histTitle').textContent = '📋 היסטוריית ביקורים — ' + customerName;
+  document.getElementById('histBody').innerHTML = '<div class="hist-empty">טוען...</div>';
+  document.getElementById('histOverlay').classList.add('open');
+  try {
+    const res = await fetch(`/api/customer-history/${customerId}`);
+    const data = await res.json();
+    renderHist(data);
+  } catch(e) {
+    document.getElementById('histBody').innerHTML = '<div class="hist-empty">שגיאה בטעינה</div>';
+  }
+}
+
+function renderHist(data) {
+  const body = document.getElementById('histBody');
+  if (!data.visits || !data.visits.length) {
+    body.innerHTML = '<div class="hist-empty">אין היסטוריית ביקורים ללקוח זה</div>'; return;
+  }
+  body.innerHTML = data.visits.map(v => {
+    const comments = v.comments.map(c => `
+      <div class="hist-comment ${c.role==='manager'?'mgr':'agent'}">
+        <div>${escHtml(c.msg)}</div>
+        <div class="hist-comment-meta">${escHtml(c.user)} · ${escHtml(c.time)}</div>
+      </div>`).join('');
+    return `<div class="hist-visit">
+      <div class="hist-visit-header">
+        <div class="hist-date">📅 ${v.date}</div>
+        <span class="hist-agent-badge">${escHtml(v.agent_name)}</span>
+      </div>
+      <div class="hist-meta">
+        ${v.check_in  ? `<span>🟢 כניסה: ${v.check_in}</span>`  : ''}
+        ${v.check_out ? `<span>🔴 יציאה: ${v.check_out}</span>` : ''}
+        ${v.duration  ? `<span>⏱️ ${v.duration} דק'</span>`      : ''}
+      </div>
+      ${v.notes ? `<div class="hist-notes">📝 ${escHtml(v.notes)}</div>` : ''}
+      ${comments ? `<div style="margin-top:6px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:700">💬 תגובות:</div>${comments}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function closeHist() { document.getElementById('histOverlay').classList.remove('open'); }
+
+function loadUnreadChats() {} // הוסר — הודעות נמצאות רק בטאב ההתראות
+
+function openGeneralChatForAgent(agentName) {
+  alert('צ\'אט כללי עם ' + agentName + ' — כנס לדף הסוכן');
+}
+
+// ── PUSH NOTIFICATIONS ────────────────────────────────────────────────────────
+function urlBase64ToUint8Array(b64) {
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const raw = atob((b64 + pad).replace(/-/g,'+').replace(/_/g,'/'));
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+function _isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+function _setStatus(title, sub, btnText, btnColor, showIosGuide) {
+  const t = document.getElementById('push-status-title');
+  const s = document.getElementById('push-status-sub');
+  const b = document.getElementById('push-action-btn');
+  const g = document.getElementById('push-ios-guide');
+  if (t) t.textContent = title;
+  if (s) s.textContent = sub;
+  if (b) { b.style.display = 'flex'; }
+  if (g) g.style.display = showIosGuide ? 'block' : 'none';
+}
+let _pushActionFn = null;
+function pushAction() { if (_pushActionFn) _pushActionFn(); }
+
+async function initPush() {
+  if (!('serviceWorker' in navigator)) { _setStatus('🔔 התראות','הדפדפן לא תומך',null); return; }
+  if (!('PushManager' in window)) {
+    if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !_isStandalone())
+      _setStatus('📲 נדרש הוספה למסך הבית','Safari רגיל לא תומך ב-Push',null,null,true);
+    else _setStatus('🔔 התראות','Push לא נתמך בדפדפן זה',null);
+    return;
+  }
+  const perm = Notification.permission;
+  if (perm === 'denied') { _setStatus('🔕 התראות חסומות','אפשר ידנית בהגדרות > {{ cfg.company_name }}',null); return; }
+  if (perm === 'default') {
+    _setStatus('🔔 התראות לטלפון','לחץ להפעלה','הפעל','#059669');
+    _pushActionFn = async () => {
+      _setStatus('🔔 התראות','מבקש הרשאה...',null);
+      const p = await Notification.requestPermission();
+      if (p !== 'granted') { _setStatus('🔕 נדחה','אפשר בהגדרות הדפדפן',null); return; }
+      await _doSubscribeAndUpdate();
+    };
+    return;
+  }
+  await _doSubscribeAndUpdate();
+}
+
+async function _doSubscribeAndUpdate() {
+  _pushActionFn = _doSubscribeAndUpdate;
+  try {
+    _setStatus('🔔 התראות','1/5 service worker...','נסה שנית','#888');
+    // Try getRegistration first (faster on iOS), fallback to ready
+    let swReg = await navigator.serviceWorker.getRegistration('/');
+    if (!swReg) {
+      // Register SW now and wait
+      swReg = await navigator.serviceWorker.register('/static/sw.js');
+      // give it a moment to activate
+      await new Promise(r => setTimeout(r, 1500));
+      swReg = await navigator.serviceWorker.getRegistration('/') || swReg;
+    }
+
+    _setStatus('🔔 התראות','2/5 מביא מפתח מהשרת...','נסה שנית','#888');
+    const kr = await fetch('/api/push/vapid-public-key');
+    const { publicKey } = await kr.json();
+    if (!publicKey) { _setStatus('❌ שרת','מפתח VAPID חסר','נסה שנית','#dc2626'); return; }
+
+    _setStatus('🔔 התראות','3/5 בודק subscription...','נסה שנית','#888');
+    const storedKey = localStorage.getItem('vapid_pub');
+    const existing  = await swReg.pushManager.getSubscription();
+    if (existing && storedKey !== publicKey) {
+      _setStatus('🔔 התראות','מנקה subscription ישן...','נסה שנית','#888');
+      await existing.unsubscribe();
+    }
+
+    _setStatus('🔔 התראות','4/5 נרשם ל-Push...','נסה שנית','#888');
+    let sub = await swReg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await swReg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey)
+      });
+    }
+    localStorage.setItem('vapid_pub', publicKey);
+
+    _setStatus('🔔 התראות','5/5 שומר בשרת...','נסה שנית','#888');
+    const res  = await fetch('/api/push/subscribe', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(sub.toJSON())
+    });
+    const data = await res.json();
+
+    if (data.status === 'ok') {
+      _setStatus('✅ התראות פעילות','תקבל PUSH על כל הודעת סוכן','📲 שלח בדיקה','#059669');
+      _pushActionFn = async () => {
+        _setStatus('✅ התראות פעילות','שולח...',null);
+        const r2 = await fetch('/api/push/test',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+        const d2 = await r2.json();
+        if (d2.ok) _setStatus('✅ התראות פעילות','📱 נשלח! בדוק את הטלפון','📲 שלח שוב','#059669');
+        else       _setStatus('❌ שגיאה בשליחה',d2.errors?.[0]||d2.error||'שגיאה','נסה שנית','#dc2626');
+      };
+    } else {
+      _setStatus('❌ שגיאת שמירה', JSON.stringify(data).slice(0,80), 'נסה שנית','#dc2626');
+    }
+  } catch(e) {
+    const msg = e.message || e.name || String(e) || 'שגיאה לא ידועה';
+    _setStatus('❌ ' + msg.slice(0,50), 'לחץ נסה שנית', 'נסה שנית','#dc2626');
+  }
+}
+
+// Run on page load
+initPush();
+
+// ── MANAGER GENERAL CHAT ─────────────────────────────────────────────────────
+let _mgcAgentId = null, _mgcTimer = null;
+// האם MGC נפתח מטאב ההתראות (true) או מכפתור הצ'אט ישירות (false)
+let _mgcFromNotif = false;
+
+function updateMgcBadge(count) {
+  const btn   = document.getElementById('mgc-btn');
+  const badge = document.getElementById('mgc-badge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count;
+    badge.style.display = 'inline-block';
+    if (btn) btn.style.background = 'linear-gradient(135deg,#dc2626,#ef4444)';
+    if (btn) btn.style.color = 'white';
+  } else {
+    badge.style.display = 'none';
+    if (btn) { btn.style.background = ''; btn.style.color = ''; }
+  }
+}
+
+async function pollMgcUnread() {
+  try {
+    const res = await fetch('/api/manager-chat-unread-count');
+    const data = await res.json();
+    updateMgcBadge(data.count || 0);
+    const unreadIds = data.agents_with_unread || [];
+    document.querySelectorAll('[id^="mgc-agent-btn-"]').forEach(btn => {
+      const id = parseInt(btn.id.replace('mgc-agent-btn-', ''));
+      if (unreadIds.includes(id)) {
+        btn.style.background = 'linear-gradient(135deg,#dc2626,#ef4444)';
+        btn.style.color = 'white';
+        btn.style.border = '2px solid #dc2626';
+      } else {
+        btn.style.background = 'white';
+        btn.style.color = 'var(--primary)';
+        btn.style.border = '2px solid var(--border)';
+      }
+    });
+  } catch(e) {}
+}
+pollMgcUnread();
+setInterval(pollMgcUnread, 4000);
+
+function openMgc(fromNotif) {
+  _mgcFromNotif = !!fromNotif;
+  document.getElementById('mgcOverlay').classList.add('open');
+  mgcBack();
+  pollMgcUnread();
+  // עיצוב שונה בהתאם למקור הפתיחה
+  const headers = document.querySelectorAll('#mgcOverlay .chat-panel-header');
+  if (_mgcFromNotif) {
+    // ירוק כהה = נפתח מטאב ההתראות — קריאה/מענה בלבד, לא מנקה 💬
+    headers.forEach(h => h.style.background = 'linear-gradient(135deg,#065f46,#059669)');
+    const pickerTitle = document.querySelector('#mgcPicker .chat-panel-title');
+    if (pickerTitle) pickerTitle.textContent = '🔔 מענה להתראה';
+  } else {
+    // כחול = נפתח מכפתור הצ'אט — סגירה תנקה את 💬
+    headers.forEach(h => h.style.background = '');
+    const pickerTitle = document.querySelector('#mgcPicker .chat-panel-title');
+    if (pickerTitle) pickerTitle.textContent = '💬 שיחה עם סוכן';
+  }
+}
+function closeMgc() {
+  // סמן כנקרא רק אם נפתח ישירות מכפתור הצ'אט (לא מטאב ההתראות)
+  if (_mgcAgentId && !_mgcFromNotif) {
+    fetch(`/api/general-chat?agent_id=${_mgcAgentId}&mark_read=1`).catch(()=>{});
+    setTimeout(pollMgcUnread, 300);
+  }
+  document.getElementById('mgcOverlay').classList.remove('open');
+  clearInterval(_mgcTimer); _mgcTimer = null; _mgcAgentId = null; _mgcFromNotif = false;
+}
+function mgcBack() {
+  clearInterval(_mgcTimer); _mgcTimer = null;
+  document.getElementById('mgcPicker').style.display = 'block';
+  document.getElementById('mgcScreen').style.display = 'none';
+}
+function mgcSelectAgent(id, name) {
+  _mgcAgentId = id;
+  document.getElementById('mgcTitle').textContent = _mgcFromNotif ? `🔔 מענה ל${name}` : `💬 שיחה עם ${name}`;
+  document.getElementById('mgcPicker').style.display = 'none';
+  document.getElementById('mgcScreen').style.display = 'flex';
+  mgcLoad(false);  // טעינה בלי לסמן כנקרא — יסומן רק בסגירה
+  setTimeout(() => document.getElementById('mgcInput').focus(), 200);
+  _mgcTimer = setInterval(mgcLoad, 8000);
+}
+async function mgcLoad(markRead) {
+  if (!_mgcAgentId) return;
+  try {
+    const url = markRead ? `/api/general-chat?agent_id=${_mgcAgentId}&mark_read=1` : `/api/general-chat?agent_id=${_mgcAgentId}`;
+    if (markRead) pollMgcUnread();
+    const res = await fetch(url);
+    const data = await res.json();
+    const wrap = document.getElementById('mgcMessages');
+    if (!data.comments || !data.comments.length) {
+      wrap.innerHTML = '<div class="chat-empty-msg">אין הודעות עדיין</div>'; return;
+    }
+    wrap.innerHTML = data.comments.map(c => {
+      const isMgr = c.user_role === 'manager';
+      return `<div class="chat-msg ${isMgr?'manager-msg':'agent-msg'} ${isMgr?'mine':'theirs'}" style="position:relative">
+        <div class="chat-bubble-name">${escHtml(c.user_name)}</div>
+        <div>${escHtml(c.message)}</div>
+        <div class="chat-meta" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <span style="display:flex;flex-direction:column;align-items:flex-start;gap:1px;line-height:1.3">
+            <span style="font-size:11px;opacity:0.75">${fmtDate(c.created_at)}</span>
+            <span>${c.created_at.slice(11,16)}</span>
+          </span>
+          <button onclick="mgcDeleteMsg(${c.id})" title="מחק הודעה"
+            style="background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;font-size:13px;padding:0;line-height:1">🗑️</button>
+        </div>
+      </div>`;
+    }).join('');
+    wrap.scrollTop = wrap.scrollHeight;
+  } catch(e) {}
+}
+async function mgcDeleteMsg(id) {
+  if (!confirm('למחוק הודעה זו?')) return;
+  await fetch(`/api/agent-messages/${id}`, { method: 'DELETE' });
+  await mgcLoad();
+}
+async function mgcDeleteAll() {
+  if (!confirm('למחוק את כל השיחה עם הסוכן?')) return;
+  await fetch(`/api/general-chat/clear?agent_id=${_mgcAgentId}`, { method: 'DELETE' });
+  await mgcLoad();
+}
+async function mgcSend() {
+  if (!_mgcAgentId) return;
+  const input = document.getElementById('mgcInput');
+  const msg = input.value.trim(); if (!msg) return;
+  input.value = '';
+  await fetch('/api/general-chat', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({message: msg, agent_id: _mgcAgentId})
+  });
+  await mgcLoad();
+  // לא מסמנים כנקרא כאן — ה-💬 מתאפר רק דרך כפתור הצ'אט הישיר
+}
+</script>
+
+<div id="maintenance-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(6,13,31,.95);backdrop-filter:blur(8px);align-items:center;justify-content:center;text-align:center;padding:24px;font-family:'Segoe UI',sans-serif;color:#f1f5f9;direction:rtl">
+  <div style="background:rgba(255,255,255,.07);border:1px solid rgba(245,158,11,.4);border-radius:24px;padding:40px 32px;max-width:360px;width:100%;box-shadow:0 0 40px rgba(245,158,11,.15)">
+    <div style="font-size:52px;margin-bottom:18px">🔧</div>
+    <div style="font-size:22px;font-weight:700;margin-bottom:10px">האפליקציה בעדכון</div>
+    <div style="font-size:15px;color:rgba(241,245,249,.6);line-height:1.6">אנחנו מבצעים שדרוג קצר.<br>נא להמתין כמה דקות.</div>
+    <div style="width:36px;height:36px;border:3px solid rgba(245,158,11,.2);border-top-color:#f59e0b;border-radius:50%;animation:spin 1s linear infinite;margin:20px auto 0"></div>
+  </div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+<script>
+setInterval(async () => {
+  try {
+    const r = await fetch('/api/maintenance-status');
+    const d = await r.json();
+    const el = document.getElementById('maintenance-overlay');
+    el.style.display = d.maintenance ? 'flex' : 'none';
+  } catch(e) {}
+}, 5000);
+</script>
+</body>
+</html>

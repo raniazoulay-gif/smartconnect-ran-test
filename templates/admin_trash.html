@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>לקוחות מחוקים — {{ cfg.company_name if cfg else 'SmartConnect' }}</title>
+<style>
+:root{--primary:#003280;--primary2:#0051c8;--bg:#f0f4ff;--card:#fff;
+      --border:#e2e8f0;--text:#1e293b;--muted:#64748b;--r:14px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+     background:var(--bg);color:var(--text);direction:rtl;min-height:100vh}
+.header{background:linear-gradient(135deg,#001f5b 0%,#003280 60%,#0051c8 100%);
+        padding:14px 20px;display:flex;align-items:center;justify-content:space-between;
+        position:sticky;top:0;z-index:100}
+.header-title{font-size:20px;font-weight:900;color:#fff}
+.header-sub{font-size:12px;color:rgba(255,255,255,0.7);margin-top:2px}
+.hbtn{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);
+      color:#fff;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;
+      cursor:pointer;text-decoration:none;font-family:inherit;transition:all 0.2s}
+.hbtn:hover{background:rgba(255,255,255,0.28)}
+.content{padding:20px}
+.info-bar{background:#fffbeb;border:1px solid #fde68a;border-radius:12px;
+          padding:12px 16px;margin-bottom:20px;font-size:14px;color:#92400e;
+          display:flex;align-items:center;gap:8px}
+.empty{text-align:center;padding:80px 20px;color:var(--muted)}
+.empty-icon{font-size:50px;margin-bottom:16px}
+.empty h3{font-size:18px;margin-bottom:8px;color:var(--text)}
+.empty p{font-size:14px}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--r);
+      padding:16px 20px;margin-bottom:12px;display:flex;align-items:center;
+      justify-content:space-between;gap:16px;box-shadow:0 1px 4px rgba(0,50,125,0.06)}
+.card-left{flex:1;min-width:0}
+.card-name{font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;
+           white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-meta{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px}
+.card-right{text-align:center;flex-shrink:0}
+.countdown{font-size:22px;font-weight:900;color:var(--primary);line-height:1}
+.countdown.urgent{color:#dc2626}
+.countdown-label{font-size:10px;color:var(--muted);margin-top:3px}
+.restore-btn{display:block;margin-top:8px;background:linear-gradient(135deg,var(--primary),var(--primary2));
+             color:#fff;border:none;border-radius:10px;padding:8px 16px;font-size:13px;
+             font-weight:700;cursor:pointer;font-family:inherit;transition:opacity 0.2s;white-space:nowrap}
+.restore-btn:hover{opacity:0.85}
+.loading{text-align:center;padding:60px;color:var(--muted)}
+.spinner{display:inline-block;width:28px;height:28px;border:3px solid #e2e8f0;
+         border-top-color:var(--primary);border-radius:50%;animation:spin 0.7s linear infinite;margin-bottom:10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tag{display:inline-block;background:#f1f5f9;color:var(--muted);border-radius:6px;
+     padding:2px 8px;font-size:11px;font-weight:600}
+.tag.day{background:#eff6ff;color:var(--primary)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+       background:#1e293b;color:#fff;border-radius:12px;padding:12px 24px;
+       font-size:14px;font-weight:600;z-index:500;opacity:0;
+       transition:opacity 0.3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.toast.success{background:#15803d}
+.toast.error{background:#dc2626}
+@media(max-width:480px){
+  .card{flex-direction:column;align-items:flex-start}
+  .card-right{display:flex;align-items:center;gap:16px;width:100%}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">🗑️ לקוחות מחוקים</div>
+    <div class="header-sub">שחזור תוך 30 ימים</div>
+  </div>
+  <a href="/admin/customers" class="hbtn">← חזרה לניהול</a>
+</div>
+
+<div class="content">
+  <div class="info-bar">
+    ⚠️ לקוחות שנמחקו ישמרו כאן למשך <strong>30 יום</strong> — לאחר מכן יימחקו לצמיתות מהמסד.
+  </div>
+  <div id="listContent">
+    <div class="loading"><div class="spinner"></div><br>טוען...</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const HEB_DAYS = {א:'ראשון',ב:'שני',ג:'שלישי',ד:'רביעי',ה:'חמישי'};
+
+async function loadTrash() {
+  const r    = await fetch('/admin/api/trash');
+  const list = await r.json();
+  const el   = document.getElementById('listContent');
+
+  if (!list.length) {
+    el.innerHTML = `<div class="empty">
+      <div class="empty-icon">✅</div>
+      <h3>אין לקוחות מחוקים</h3>
+      <p>כל הלקוחות שמחקת יופיעו כאן</p>
+    </div>`;
+    return;
+  }
+
+  let html = '';
+  list.forEach(c => {
+    const urgent = c.days_remaining <= 7;
+    html += `<div class="card">
+      <div class="card-left">
+        <div class="card-name">${esc(c.name)}</div>
+        <div class="card-meta">
+          ${c.city ? `<span>${esc(c.city)}</span>` : ''}
+          ${c.region ? `<span class="tag">${esc(c.region)}</span>` : ''}
+          ${c.original_day ? `<span class="tag day">יום ${esc(c.original_day)}</span>` : ''}
+          ${c.card_code ? `<span>קוד: ${esc(c.card_code)}</span>` : ''}
+          <span>נמחק: ${c.deleted_date}</span>
+        </div>
+      </div>
+      <div class="card-right">
+        <div class="countdown ${urgent ? 'urgent' : ''}">${c.days_remaining}</div>
+        <div class="countdown-label">ימים לפקיעה</div>
+        <button class="restore-btn" onclick="restoreCustomer(${c.id}, '${esc(c.name)}')">
+          🔄 שחזר
+        </button>
+      </div>
+    </div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+async function restoreCustomer(id, name) {
+  if (!confirm(`לשחזר את "${name}" לתכנון?\n\nהלקוח יחזור עם כל הפרטים המקוריים.`)) return;
+  const r    = await fetch(`/admin/api/customers/${id}/restore`, {method: 'POST'});
+  const data = await r.json();
+  if (data.ok) {
+    showToast('✅ הלקוח שוחזר בהצלחה!', 'success');
+    loadTrash();
+  } else {
+    showToast('❌ ' + (data.error || 'שגיאה בשחזור'), 'error');
+  }
+}
+
+function esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function showToast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast '+type;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 3000);
+}
+
+loadTrash();
+</script>
+</body>
+</html>

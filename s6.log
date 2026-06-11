@@ -1,0 +1,43 @@
+INFO:     Started server process [23600]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8006 (Press CTRL+C to quit)
+INFO:     127.0.0.1:65014 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60286 - "POST /login HTTP/1.1" 302 Found
+INFO:     127.0.0.1:60287 - "GET /dashboard?date=2026-04-15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64624 - "GET / HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:64624 - "GET /dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64624 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64624 - "GET /dashboard?date=2026-04-22 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64624 - "GET /dashboard?date=2026-04-06 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64624 - "GET /store/472?date=2026-04-06 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64624 - "GET /api/comments?customer_id=472&visit_date=2026-04-06 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64624 - "POST /api/checkin HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64624 - "GET /store/472?date=2026-04-06 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64624 - "GET /api/comments?customer_id=472&visit_date=2026-04-06 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64624 - "POST /api/checkout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64624 - "GET /store/472?date=2026-04-06 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64624 - "GET /api/comments?customer_id=472&visit_date=2026-04-06 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53259 - "GET /dashboard?date=2026-04-06 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53259 - "GET /dashboard?date=2026-04-16 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53259 - "GET /dashboard?date=2026-04-06 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64054 - "GET /logout HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:64054 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54295 - "POST /login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51607 - "POST /login HTTP/1.1" 302 Found
+INFO:     127.0.0.1:51607 - "GET /dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60617 - "GET /store/476?date=2026-04-14 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60617 - "GET /api/comments?customer_id=476&visit_date=2026-04-14 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60617 - "POST /api/checkin HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60617 - "GET /store/476?date=2026-04-14 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60617 - "GET /api/comments?customer_id=476&visit_date=2026-04-14 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61380 - "POST /api/checkout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61380 - "GET /api/comments?customer_id=476&visit_date=2026-04-14 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61380 - "GET /store/476?date=2026-04-14 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61380 - "GET /api/comments?customer_id=476&visit_date=2026-04-14 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59671 - "POST /api/comment HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57945 - "GET /api/comments?customer_id=476&visit_date=2026-04-14 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57945 - "GET /dashboard?date=2026-04-14 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54893 - "GET /dashboard?date=2026-04-23 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54893 - "GET /dashboard?date=2026-04-13 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54893 - "GET /dashboard?date=2026-04-14 HTTP/1.1" 200 OK
