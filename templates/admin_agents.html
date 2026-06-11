@@ -668,19 +668,23 @@ async function saveCust(){
   const btn = document.getElementById('cm-save-btn');
   btn.disabled = true; btn.textContent = 'שומר...';
 
+  const payload = {name, city, address:'', region, day, delivery_day:delivery, card_code:cardCode, weeks};
+  console.log('[saveCust] id=', id, 'payload=', JSON.stringify(payload));
+
   let r, res;
   if(id){
     r = await fetch(`/admin/api/customers/${id}`, {
       method:'PUT', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({name, city, address:'', region, day, delivery_day:delivery, card_code:cardCode, weeks})
+      body: JSON.stringify(payload)
     });
   } else {
     r = await fetch('/admin/api/customers', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({name, city, address:'', region, day, delivery_day:delivery, card_code:cardCode, weeks})
+      body: JSON.stringify(payload)
     });
   }
   res = await r.json();
+  console.log('[saveCust] response:', res, 'status:', r.status);
   btn.disabled = false; btn.textContent = '💾 שמור';
 
   if(res.ok || res.id){
