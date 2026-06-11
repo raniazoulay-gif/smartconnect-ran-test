@@ -277,21 +277,28 @@ async def api_customers_update(request: Request, cid: int):
         db.execute(
             """UPDATE customers SET
                card_code=?, name=?, city=?, address=?, region=?,
-               assigned_visit_day=?,
+               assigned_visit_day=?, visit_day=?,
                week_1=?, week_2=?, week_3=?, week_4=?,
                week_5=?, week_6=?,
                delivery_day=?
                WHERE id=?""",
-            (card_code, name, city, address, region, assigned_day,
+            (card_code, name, city, address, region,
+             assigned_day, assigned_day,
              w["week_1"], w["week_2"], w["week_3"], w["week_4"],
              w["week_5"], w["week_6"],
              delivery_day, cid),
         )
         db.commit()
-    finally:
         db.close()
-
-    return JSONResponse({"ok": True})
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        log.error(f"[update customer {cid}] שגיאה: {e}")
+        try:
+            db.rollback()
+            db.close()
+        except Exception:
+            pass
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 # ── API — Soft Delete ─────────────────────────────────────────────────────────
