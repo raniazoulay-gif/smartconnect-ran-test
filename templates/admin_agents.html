@@ -364,6 +364,7 @@ function render(){
           <button class="abtn abtn-add" onclick="openAddCustModal(${a.id})">+ הוסף לקוח</button>
           <button class="abtn abtn-excel" onclick="openExcelForAgent(${a.id},'${esc(a.name)}')">📥 Excel</button>
           <button class="abtn abtn-edit" onclick="openEditAgentModal(${a.id})">✏️ עריכה</button>
+          <button class="abtn" style="background:#fff7ed;border-color:#fed7aa;color:#ea580c" onclick="refreshAgent(${a.id})">🔄 עדכן</button>
           <button class="abtn abtn-del" onclick="deleteAgent(${a.id},'${esc(a.name)}')">🗑 מחק</button>
           <span class="chevron open" id="chev-${a.id}">▼</span>
         </div>
@@ -567,6 +568,28 @@ async function uploadExcelForExisting(){
     resDiv.className = 'import-error';
     resDiv.textContent = '❌ ' + (res.error || 'שגיאה');
   }
+}
+
+// ─────────────────────────────────────────────────────────
+//  REFRESH SINGLE AGENT
+// ─────────────────────────────────────────────────────────
+async function refreshAgent(agentId){
+  const agent = agentsData.find(a => a.id === agentId);
+  if(!agent) return;
+  await loadAgentCustomers(agent);
+  // re-render only that agent's section
+  const sec = document.getElementById(`sec-${agentId}`);
+  if(!sec){ render(); return; }
+  const isOpen = document.getElementById(`body-${agentId}`)?.classList.contains('open');
+  render();
+  // restore open state
+  if(!isOpen){
+    const body = document.getElementById(`body-${agentId}`);
+    const chev = document.getElementById(`chev-${agentId}`);
+    if(body) body.classList.remove('open');
+    if(chev) chev.classList.remove('open');
+  }
+  toast(`רשימת לקוחות של ${agent.name} עודכנה ✓`);
 }
 
 // ─────────────────────────────────────────────────────────
