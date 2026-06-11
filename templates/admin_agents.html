@@ -476,7 +476,7 @@ async function saveAgent(){
 
   const newAgentId = res.id || id;
 
-  // If Excel file attached → upload now
+  // If Excel file attached → upload now, then reload
   if(!id && agentExcelFile && newAgentId){
     btn.disabled = true; btn.textContent = 'מייבא לקוחות...';
     const fd = new FormData();
@@ -489,8 +489,9 @@ async function saveAgent(){
     if(eres.ok){
       resDiv.className = 'import-result';
       resDiv.textContent = `✅ ${eres.message}`;
-      toast(id ? 'סוכן עודכן ✓' : `סוכן נוסף עם ${eres.inserted} לקוחות ✓`);
-      setTimeout(() => closeAgentModal(), 1200);
+      toast(`סוכן נוסף עם ${eres.inserted} לקוחות ✓`);
+      closeAgentModal();           // סגור מיד
+      await loadAll();             // טען הכל — אחרי הסגירה
     } else {
       resDiv.className = 'import-error';
       resDiv.textContent = '❌ ' + (eres.error || 'שגיאה בייבוא');
@@ -498,8 +499,8 @@ async function saveAgent(){
   } else {
     toast(id ? 'סוכן עודכן ✓' : 'סוכן נוסף ✓');
     closeAgentModal();
+    await loadAll();
   }
-  await loadAll();
 }
 
 function onAgentFileSelected(input){
@@ -548,7 +549,9 @@ async function uploadExcelForExisting(){
     resDiv.className = 'import-result';
     resDiv.textContent = `✅ ${res.message}`;
     toast(`יובאו ${res.inserted} לקוחות ✓`);
-    setTimeout(() => { closeAgentModal(); document.getElementById('am-save-btn').onclick = saveAgent; document.getElementById('am-save-btn').textContent = '💾 שמור'; }, 1200);
+    closeAgentModal();
+    document.getElementById('am-save-btn').onclick = saveAgent;
+    document.getElementById('am-save-btn').textContent = '💾 שמור';
     await loadAll();
   } else {
     resDiv.className = 'import-error';
