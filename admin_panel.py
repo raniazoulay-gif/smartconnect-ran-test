@@ -272,9 +272,11 @@ async def api_customers_update(request: Request, cid: int):
 
     w = {f"week_{i}": (1 if i in weeks else 0) for i in range(1, 7)}
 
+    log.info(f"[update customer {cid}] data received: name={name!r}, day={assigned_day!r}, delivery={delivery_day!r}, region={region!r}, weeks={weeks}")
+
     db = get_db()
     try:
-        db.execute(
+        cur = db.execute(
             """UPDATE customers SET
                card_code=?, name=?, city=?, address=?, region=?,
                assigned_visit_day=?, visit_day=?,
@@ -288,9 +290,11 @@ async def api_customers_update(request: Request, cid: int):
              w["week_5"], w["week_6"],
              delivery_day, cid),
         )
+        rowcount = getattr(cur, 'rowcount', -1)
+        log.info(f"[update customer {cid}] rowcount={rowcount}")
         db.commit()
         db.close()
-        return JSONResponse({"ok": True})
+        return JSONResponse({"ok": True, "rowcount": rowcount})
     except Exception as e:
         log.error(f"[update customer {cid}] שגיאה: {e}")
         try:
