@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ניהול סוכנים — {{ cfg.company_name if cfg else 'SmartConnect' }}</title>
+<style>
+:root{
+  --primary:#003280;--primary2:#0051c8;
+  --bg:#f0f4ff;--card:#fff;--border:#e2e8f0;
+  --text:#1e293b;--muted:#64748b;--r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+     background:var(--bg);color:var(--text);direction:rtl;min-height:100vh}
+
+/* ── HEADER ── */
+.header{background:linear-gradient(135deg,#001f5b 0%,#003280 60%,#0051c8 100%);
+        padding:14px 20px;display:flex;align-items:center;justify-content:space-between;
+        position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,0.2)}
+.header-title{font-size:20px;font-weight:900;color:#fff;letter-spacing:1px}
+.header-sub{font-size:12px;color:rgba(255,255,255,0.7);margin-top:2px}
+.header-actions{display:flex;gap:10px;align-items:center}
+.hbtn{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);
+      color:#fff;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;
+      cursor:pointer;text-decoration:none;font-family:inherit;transition:all 0.2s;white-space:nowrap}
+.hbtn:hover{background:rgba(255,255,255,0.28)}
+.hbtn.active{background:rgba(255,255,255,0.3);border-color:rgba(255,255,255,0.5)}
+
+/* ── TOOLBAR ── */
+.toolbar{padding:16px 20px;display:flex;gap:10px;align-items:center;
+         background:#fff;border-bottom:1px solid var(--border)}
+.add-btn{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;
+         border:none;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:700;
+         cursor:pointer;font-family:inherit;white-space:nowrap}
+
+/* ── AGENTS GRID ── */
+.agents-wrap{padding:20px}
+.agents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.agent-card{background:#fff;border:1px solid var(--border);border-radius:16px;
+            padding:20px;box-shadow:0 1px 6px rgba(0,0,50,0.06);transition:box-shadow 0.2s}
+.agent-card:hover{box-shadow:0 4px 18px rgba(0,50,128,0.12)}
+.agent-avatar{width:48px;height:48px;border-radius:50%;
+              background:linear-gradient(135deg,var(--primary),var(--primary2));
+              display:flex;align-items:center;justify-content:center;
+              font-size:22px;color:#fff;font-weight:900;flex-shrink:0}
+.agent-header{display:flex;gap:14px;align-items:center;margin-bottom:14px}
+.agent-info{flex:1;min-width:0}
+.agent-name{font-size:17px;font-weight:800;color:var(--text)}
+.agent-username{font-size:12px;color:var(--muted);margin-top:2px;direction:ltr;text-align:right}
+.agent-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.meta-chip{font-size:11px;font-weight:600;border-radius:20px;padding:3px 10px;white-space:nowrap}
+.chip-customers{background:#eff6ff;color:var(--primary);border:1px solid #bfdbfe}
+.chip-region{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;
+             max-width:140px;overflow:hidden;text-overflow:ellipsis}
+.agent-actions{display:flex;gap:8px;flex-wrap:wrap}
+.abtn{border-radius:9px;padding:7px 14px;font-size:12px;font-weight:700;
+      cursor:pointer;font-family:inherit;border:1.5px solid;transition:all 0.15s;white-space:nowrap}
+.abtn-edit{background:#eff6ff;border-color:#bfdbfe;color:var(--primary)}
+.abtn-edit:hover{background:#dbeafe}
+.abtn-excel{background:#f0fdf4;border-color:#bbf7d0;color:#15803d}
+.abtn-excel:hover{background:#dcfce7}
+.abtn-customers{background:#fdf4ff;border-color:#e9d5ff;color:#7c3aed}
+.abtn-customers:hover{background:#f3e8ff}
+.abtn-del{background:#fef2f2;border-color:#fecaca;color:#dc2626}
+.abtn-del:hover{background:#fee2e2}
+
+/* ── EMPTY / LOADING ── */
+.loading{text-align:center;padding:60px 20px;color:var(--muted)}
+.spinner{display:inline-block;width:32px;height:32px;border:3px solid #e2e8f0;
+         border-top-color:var(--primary);border-radius:50%;animation:spin 0.7s linear infinite;margin-bottom:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:16px}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;
+         display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:#fff;border-radius:20px;padding:28px;width:100%;max-width:460px;
+       box-shadow:0 20px 60px rgba(0,0,0,0.25);max-height:90vh;overflow-y:auto}
+.modal h3{font-size:18px;font-weight:800;color:var(--primary);margin-bottom:20px}
+.form-row{margin-bottom:14px}
+label{display:block;font-size:12px;font-weight:700;color:var(--muted);
+      margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+input,textarea{width:100%;border:1.5px solid var(--border);border-radius:10px;
+               padding:10px 12px;font-size:14px;font-family:inherit;
+               outline:none;transition:border 0.2s;color:var(--text)}
+input:focus,textarea:focus{border-color:var(--primary)}
+.hint{font-size:11px;color:var(--muted);margin-top:4px}
+.modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
+.btn-cancel{background:#f1f5f9;border:1px solid var(--border);color:var(--muted);
+            border-radius:10px;padding:10px 20px;font-size:14px;font-weight:700;
+            cursor:pointer;font-family:inherit}
+.btn-save{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;
+          border:none;border-radius:10px;padding:10px 24px;font-size:14px;
+          font-weight:700;cursor:pointer;font-family:inherit}
+.btn-save:disabled{opacity:0.5;cursor:not-allowed}
+
+/* ── CUSTOMERS PANEL ── */
+.customers-panel{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;
+                 display:flex;align-items:stretch;justify-content:flex-end}
+.customers-drawer{background:#fff;width:min(680px,100%);display:flex;flex-direction:column;
+                  box-shadow:-4px 0 30px rgba(0,0,0,0.2);overflow:hidden}
+.drawer-header{background:linear-gradient(135deg,#001f5b,#003280);padding:18px 20px;
+               display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.drawer-header h3{color:#fff;font-size:18px;font-weight:800}
+.drawer-close{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);
+              color:#fff;border-radius:8px;padding:6px 14px;font-size:13px;
+              font-weight:700;cursor:pointer;font-family:inherit}
+.drawer-toolbar{padding:12px 16px;border-bottom:1px solid var(--border);
+                display:flex;gap:10px;align-items:center;flex-shrink:0}
+.drawer-search{flex:1;border:1.5px solid var(--border);border-radius:10px;
+               padding:9px 12px;font-size:14px;font-family:inherit;outline:none}
+.drawer-search:focus{border-color:var(--primary)}
+.day-filter{border:1.5px solid var(--border);border-radius:10px;padding:9px 12px;
+            font-size:14px;font-family:inherit;background:#fff;color:var(--text)}
+.drawer-body{flex:1;overflow-y:auto}
+.cust-table{width:100%;border-collapse:collapse;font-size:13px}
+.cust-table th{background:#f1f5f9;padding:9px 12px;text-align:right;font-size:11px;
+               font-weight:700;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap}
+.cust-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.cust-table tr:hover td{background:#f8faff}
+.day-badge{display:inline-block;background:#eff6ff;color:var(--primary);
+           border:1px solid #bfdbfe;border-radius:20px;padding:2px 9px;
+           font-size:11px;font-weight:700}
+.cust-edit-btn{background:#eff6ff;border:1px solid #bfdbfe;color:var(--primary);
+               border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;
+               cursor:pointer;font-family:inherit}
+.cust-edit-btn:hover{background:#dbeafe}
+.cust-del-btn{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;
+              border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;
+              cursor:pointer;font-family:inherit;margin-right:4px}
+.cust-del-btn:hover{background:#fee2e2}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+       background:#1e293b;color:#fff;border-radius:12px;padding:12px 22px;
+       font-size:14px;font-weight:600;z-index:9999;opacity:0;
+       transition:opacity 0.3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+
+/* ── EXCEL UPLOAD MODAL ── */
+.upload-area{border:2px dashed #93c5fd;border-radius:12px;padding:24px;
+             text-align:center;background:#f0f9ff;cursor:pointer;
+             transition:all 0.2s;position:relative}
+.upload-area:hover{border-color:var(--primary);background:#eff6ff}
+.upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-size:36px;margin-bottom:8px}
+.upload-text{font-size:14px;color:var(--muted);font-weight:600}
+.upload-filename{font-size:13px;color:var(--primary);margin-top:6px;font-weight:700}
+.import-result{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;
+               padding:12px 16px;margin-top:12px;font-size:13px;color:#15803d}
+.import-error{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;
+              padding:12px 16px;margin-top:12px;font-size:13px;color:#dc2626}
+
+@media(max-width:600px){
+  .agents-grid{grid-template-columns:1fr}
+  .customers-drawer{width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <div class="header-title">{{ cfg.company_name if cfg else 'SmartConnect' }}</div>
+    <div class="header-sub">פאנל ניהול — סוכנים</div>
+  </div>
+  <div class="header-actions">
+    <a href="/admin/customers" class="hbtn">📋 לקוחות</a>
+    <a href="/admin/agents" class="hbtn active">👤 סוכנים</a>
+    <a href="/admin/logout" class="hbtn">יציאה</a>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <button class="add-btn" onclick="openAddModal()">+ הוסף סוכן</button>
+  <span id="agents-count" style="font-size:13px;color:var(--muted)"></span>
+</div>
+
+<!-- AGENTS GRID -->
+<div class="agents-wrap">
+  <div id="agents-loading" class="loading">
+    <div class="spinner"></div><br>טוען סוכנים...
+  </div>
+  <div id="agents-empty" class="empty" style="display:none">
+    אין סוכנים עדיין — לחץ "+ הוסף סוכן"
+  </div>
+  <div class="agents-grid" id="agents-grid"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════ ADD/EDIT MODAL ══════════════════════════════ -->
+<div class="overlay" id="agent-modal" style="display:none" onclick="if(event.target===this)closeAgentModal()">
+  <div class="modal">
+    <h3 id="modal-title">➕ הוסף סוכן</h3>
+    <input type="hidden" id="modal-agent-id" value="">
+
+    <div class="form-row">
+      <label>שם מלא *</label>
+      <input id="m-name" placeholder="ישראל ישראלי">
+    </div>
+    <div class="form-row">
+      <label>שם משתמש *</label>
+      <input id="m-username" placeholder="israel" dir="ltr">
+    </div>
+    <div class="form-row">
+      <label>סיסמה <span id="m-pass-hint" style="font-weight:400;text-transform:none">(השאר ריק לאי-שינוי)</span></label>
+      <input id="m-password" type="password" placeholder="סיסמה חדשה" dir="ltr" autocomplete="new-password">
+    </div>
+    <div class="form-row">
+      <label>אזורים (מופרדים בפסיק)</label>
+      <input id="m-regions" placeholder="ירושלים והסביבה, בני ברק" dir="rtl">
+      <div class="hint">ניתן להשאיר ריק — יתמלא אוטומטית בייבוא Excel</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAgentModal()">ביטול</button>
+      <button class="btn-save" id="modal-save-btn" onclick="saveAgent()">💾 שמור</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ EXCEL UPLOAD MODAL ══════════════════════════ -->
+<div class="overlay" id="excel-modal" style="display:none" onclick="if(event.target===this)closeExcelModal()">
+  <div class="modal">
+    <h3 id="excel-modal-title">📥 ייבוא לקוחות מ-Excel</h3>
+    <input type="hidden" id="excel-agent-id" value="">
+
+    <div class="upload-area" id="upload-area">
+      <input type="file" id="excel-file" accept=".xlsx,.xls" onchange="onFileSelected(this)">
+      <div class="upload-icon">📄</div>
+      <div class="upload-text">גרור קובץ Excel לכאן או לחץ לבחירה</div>
+      <div class="upload-filename" id="upload-filename" style="display:none"></div>
+    </div>
+    <div id="import-result" style="display:none"></div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeExcelModal()">סגור</button>
+      <button class="btn-save" id="excel-upload-btn" onclick="uploadExcel()" disabled>📥 ייבא</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ CUSTOMERS DRAWER ══════════════════════════ -->
+<div class="customers-panel" id="customers-panel" style="display:none">
+  <div class="customers-drawer">
+    <div class="drawer-header">
+      <h3 id="drawer-agent-name">לקוחות הסוכן</h3>
+      <button class="drawer-close" onclick="closeDrawer()">✕ סגור</button>
+    </div>
+    <div class="drawer-toolbar">
+      <input class="drawer-search" id="drawer-search" placeholder="🔍 חיפוש לקוח..." oninput="filterDrawer()">
+      <select class="day-filter" id="drawer-day" onchange="filterDrawer()">
+        <option value="">כל הימים</option>
+        <option value="א">ראשון (א)</option>
+        <option value="ב">שני (ב)</option>
+        <option value="ג">שלישי (ג)</option>
+        <option value="ד">רביעי (ד)</option>
+        <option value="ה">חמישי (ה)</option>
+      </select>
+    </div>
+    <div class="drawer-body">
+      <div id="drawer-loading" class="loading" style="padding:40px 20px">
+        <div class="spinner"></div><br>טוען לקוחות...
+      </div>
+      <table class="cust-table" id="cust-table" style="display:none">
+        <thead>
+          <tr>
+            <th>שם לקוח</th>
+            <th>עיר</th>
+            <th>אזור</th>
+            <th>יום ביקור</th>
+            <th>שבועות</th>
+            <th>פעולות</th>
+          </tr>
+        </thead>
+        <tbody id="cust-tbody"></tbody>
+      </table>
+      <div id="drawer-empty" class="empty" style="display:none">אין לקוחות לסוכן זה</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ CUSTOMER EDIT MODAL ══════════════════════════ -->
+<div class="overlay" id="cust-modal" style="display:none" onclick="if(event.target===this)closeCustModal()">
+  <div class="modal">
+    <h3>✏️ עריכת לקוח</h3>
+    <input type="hidden" id="cust-id" value="">
+
+    <div class="form-row">
+      <label>שם לקוח *</label>
+      <input id="cust-name" placeholder="שם החנות / לקוח">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-row">
+        <label>עיר</label>
+        <input id="cust-city" placeholder="עיר">
+      </div>
+      <div class="form-row">
+        <label>אזור</label>
+        <input id="cust-region" placeholder="אזור">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-row">
+        <label>יום ביקור</label>
+        <select id="cust-day">
+          <option value="">ללא</option>
+          <option value="א">ראשון (א)</option>
+          <option value="ב">שני (ב)</option>
+          <option value="ג">שלישי (ג)</option>
+          <option value="ד">רביעי (ד)</option>
+          <option value="ה">חמישי (ה)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>יום אספקה</label>
+        <input id="cust-delivery" placeholder="ימי אספקה">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>שבועות פעילים</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px" id="week-checkboxes">
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text)" v-for="i in [1,2,3,4,5,6]">
+        </label>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>קוד לקוח (BP Code)</label>
+      <input id="cust-card-code" placeholder="קוד" dir="ltr">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeCustModal()">ביטול</button>
+      <button class="btn-save" onclick="saveCust()">💾 שמור</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let agentsData = [];
+let currentDrawerAgentId = null;
+let allDrawerCustomers = [];
+
+// ─── Week checkboxes init ───
+const weekBox = document.getElementById('week-checkboxes');
+for(let i=1;i<=6;i++){
+  const lbl = document.createElement('label');
+  lbl.style.cssText='display:flex;align-items:center;gap:4px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text);cursor:pointer;background:#f1f5f9;border-radius:8px;padding:5px 10px;border:1.5px solid #e2e8f0';
+  lbl.innerHTML=`<input type="checkbox" id="week_${i}" style="width:auto;accent-color:var(--primary)"> שבוע ${i}`;
+  weekBox.appendChild(lbl);
+}
+
+// ─── Load agents ───
+async function loadAgents(){
+  try{
+    const r = await fetch('/admin/api/agents');
+    agentsData = await r.json();
+    renderAgents();
+  }catch(e){
+    document.getElementById('agents-loading').textContent='שגיאה בטעינת סוכנים';
+  }
+}
+
+function renderAgents(){
+  const grid = document.getElementById('agents-grid');
+  const loading = document.getElementById('agents-loading');
+  const empty = document.getElementById('agents-empty');
+  const count = document.getElementById('agents-count');
+  loading.style.display='none';
+  count.textContent=`${agentsData.length} סוכנים`;
+  if(!agentsData.length){
+    empty.style.display='block';
+    return;
+  }
+  empty.style.display='none';
+  grid.innerHTML=agentsData.map(a=>`
+    <div class="agent-card" id="agent-card-${a.id}">
+      <div class="agent-header">
+        <div class="agent-avatar">${a.name.charAt(0)}</div>
+        <div class="agent-info">
+          <div class="agent-name">${esc(a.name)}</div>
+          <div class="agent-username">@${esc(a.username)}</div>
+        </div>
+      </div>
+      <div class="agent-meta">
+        <span class="meta-chip chip-customers">👥 ${a.customer_count} לקוחות</span>
+        ${a.regions ? a.regions.split(',').filter(Boolean).map(r=>`<span class="meta-chip chip-region">${esc(r.trim())}</span>`).join(''):'<span class="meta-chip" style="background:#fef9c3;color:#854d0e;border:1px solid #fde68a">⚠️ ללא אזור</span>'}
+      </div>
+      <div class="agent-actions">
+        <button class="abtn abtn-edit" onclick="openEditModal(${a.id})">✏️ עריכה</button>
+        <button class="abtn abtn-excel" onclick="openExcelModal(${a.id},'${esc(a.name)}')">📥 ייבוא Excel</button>
+        <button class="abtn abtn-customers" onclick="openDrawer(${a.id},'${esc(a.name)}')">👁 לקוחות</button>
+        <button class="abtn abtn-del" onclick="deleteAgent(${a.id},'${esc(a.name)}')">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── Add/Edit Modal ───
+function openAddModal(){
+  document.getElementById('modal-title').textContent='➕ הוסף סוכן';
+  document.getElementById('modal-agent-id').value='';
+  document.getElementById('m-name').value='';
+  document.getElementById('m-username').value='';
+  document.getElementById('m-password').value='';
+  document.getElementById('m-regions').value='';
+  document.getElementById('m-pass-hint').style.display='none';
+  document.getElementById('agent-modal').style.display='flex';
+  setTimeout(()=>document.getElementById('m-name').focus(),100);
+}
+
+function openEditModal(id){
+  const a = agentsData.find(x=>x.id===id);
+  if(!a) return;
+  document.getElementById('modal-title').textContent='✏️ עריכת סוכן';
+  document.getElementById('modal-agent-id').value=id;
+  document.getElementById('m-name').value=a.name;
+  document.getElementById('m-username').value=a.username;
+  document.getElementById('m-password').value='';
+  document.getElementById('m-regions').value=a.regions;
+  document.getElementById('m-pass-hint').style.display='inline';
+  document.getElementById('agent-modal').style.display='flex';
+}
+
+function closeAgentModal(){
+  document.getElementById('agent-modal').style.display='none';
+}
+
+async function saveAgent(){
+  const id      = document.getElementById('modal-agent-id').value;
+  const name    = document.getElementById('m-name').value.trim();
+  const username= document.getElementById('m-username').value.trim();
+  const password= document.getElementById('m-password').value.trim();
+  const regions = document.getElementById('m-regions').value.trim();
+  if(!name||!username){ toast('שם ושם משתמש הם שדות חובה','#dc2626'); return; }
+  if(!id && !password){ toast('סיסמה חובה עבור סוכן חדש','#dc2626'); return; }
+
+  const btn = document.getElementById('modal-save-btn');
+  btn.disabled=true; btn.textContent='שומר...';
+
+  try{
+    const method = id ? 'PUT' : 'POST';
+    const url    = id ? `/admin/api/agents/${id}` : '/admin/api/agents';
+    const r = await fetch(url,{method,headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,username,password,regions})});
+    const res = await r.json();
+    if(res.ok){
+      closeAgentModal();
+      toast(id ? 'סוכן עודכן בהצלחה ✓' : 'סוכן נוסף בהצלחה ✓');
+      await loadAgents();
+    } else {
+      toast(res.error||'שגיאה','#dc2626');
+    }
+  }catch(e){ toast('שגיאת רשת','#dc2626'); }
+  btn.disabled=false; btn.textContent='💾 שמור';
+}
+
+// ─── Delete Agent ───
+async function deleteAgent(id, name){
+  if(!confirm(`מחיקת סוכן "${name}"?\n\nהסוכן יימחק אך לקוחותיו יישארו במערכת.`)) return;
+  const r = await fetch(`/admin/api/agents/${id}`,{method:'DELETE'});
+  const res = await r.json();
+  if(res.ok){ toast('סוכן נמחק'); await loadAgents(); }
+  else toast(res.error||'שגיאה','#dc2626');
+}
+
+// ─── Excel Modal ───
+let excelFile = null;
+function openExcelModal(id, name){
+  document.getElementById('excel-agent-id').value=id;
+  document.getElementById('excel-modal-title').textContent=`📥 ייבוא לקוחות — ${name}`;
+  document.getElementById('excel-file').value='';
+  document.getElementById('upload-filename').style.display='none';
+  document.getElementById('import-result').style.display='none';
+  document.getElementById('excel-upload-btn').disabled=true;
+  excelFile=null;
+  document.getElementById('excel-modal').style.display='flex';
+}
+function closeExcelModal(){
+  document.getElementById('excel-modal').style.display='none';
+  excelFile=null;
+}
+function onFileSelected(input){
+  excelFile = input.files[0];
+  const fn = document.getElementById('upload-filename');
+  if(excelFile){
+    fn.textContent='✓ '+excelFile.name;
+    fn.style.display='block';
+    document.getElementById('excel-upload-btn').disabled=false;
+  }
+}
+async function uploadExcel(){
+  const id = document.getElementById('excel-agent-id').value;
+  if(!excelFile) return;
+  const btn = document.getElementById('excel-upload-btn');
+  btn.disabled=true; btn.textContent='מייבא...';
+  const fd = new FormData();
+  fd.append('file', excelFile);
+  const resDiv = document.getElementById('import-result');
+  try{
+    const r = await fetch(`/admin/api/agents/${id}/import-excel`,{method:'POST',body:fd});
+    const res = await r.json();
+    resDiv.style.display='block';
+    if(res.ok){
+      resDiv.className='import-result';
+      resDiv.innerHTML=`✅ ${res.message}<br>
+        ${res.new_regions?.length ? `<small>אזורים חדשים: ${res.new_regions.join(', ')}</small><br>` : ''}
+        ${res.errors?.length ? `<small style="color:#dc2626">שגיאות: ${res.errors.join(' | ')}</small>` : ''}`;
+      await loadAgents();
+    } else {
+      resDiv.className='import-error';
+      resDiv.textContent='❌ '+res.error;
+    }
+  }catch(e){
+    resDiv.style.display='block';
+    resDiv.className='import-error';
+    resDiv.textContent='❌ שגיאת רשת';
+  }
+  btn.disabled=false; btn.textContent='📥 ייבא';
+}
+
+// ─── Customers Drawer ───
+async function openDrawer(agentId, agentName){
+  currentDrawerAgentId = agentId;
+  document.getElementById('drawer-agent-name').textContent=`👤 ${agentName}`;
+  document.getElementById('customers-panel').style.display='flex';
+  document.getElementById('drawer-loading').style.display='block';
+  document.getElementById('cust-table').style.display='none';
+  document.getElementById('drawer-empty').style.display='none';
+  document.getElementById('drawer-search').value='';
+  document.getElementById('drawer-day').value='';
+  await loadDrawerCustomers();
+}
+function closeDrawer(){
+  document.getElementById('customers-panel').style.display='none';
+  currentDrawerAgentId=null;
+}
+
+async function loadDrawerCustomers(){
+  try{
+    const r = await fetch(`/admin/api/agents/${currentDrawerAgentId}/customers`);
+    const res = await r.json();
+    allDrawerCustomers = res.customers||[];
+    renderDrawer(allDrawerCustomers);
+  }catch(e){
+    document.getElementById('drawer-loading').textContent='שגיאה בטעינה';
+  }
+}
+
+function renderDrawer(customers){
+  const loading = document.getElementById('drawer-loading');
+  const table   = document.getElementById('cust-table');
+  const empty   = document.getElementById('drawer-empty');
+  const tbody   = document.getElementById('cust-tbody');
+  loading.style.display='none';
+  if(!customers.length){
+    empty.style.display='block';
+    table.style.display='none';
+    return;
+  }
+  empty.style.display='none';
+  table.style.display='table';
+  tbody.innerHTML=customers.map(c=>`
+    <tr>
+      <td><strong>${esc(c.name)}</strong></td>
+      <td>${esc(c.city)}</td>
+      <td><small style="color:var(--muted)">${esc(c.region)}</small></td>
+      <td>${c.day?`<span class="day-badge">${c.day_name} (${c.day})</span>`:'<span style="color:var(--muted)">—</span>'}</td>
+      <td><small>${c.weeks_display}</small></td>
+      <td>
+        <button class="cust-edit-btn" onclick="openCustEdit(${JSON.stringify(c).replace(/"/g,'&quot;')})">✏️</button>
+        <button class="cust-del-btn" onclick="deleteCust(${c.id},'${esc(c.name)}')">🗑</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterDrawer(){
+  const q   = document.getElementById('drawer-search').value.toLowerCase();
+  const day = document.getElementById('drawer-day').value;
+  let filtered = allDrawerCustomers;
+  if(q) filtered = filtered.filter(c=>(c.name+c.city+c.region).toLowerCase().includes(q));
+  if(day) filtered = filtered.filter(c=>c.day===day);
+  renderDrawer(filtered);
+}
+
+// ─── Customer Edit ───
+function openCustEdit(c){
+  document.getElementById('cust-id').value=c.id;
+  document.getElementById('cust-name').value=c.name;
+  document.getElementById('cust-city').value=c.city;
+  document.getElementById('cust-region').value=c.region;
+  document.getElementById('cust-day').value=c.day||'';
+  document.getElementById('cust-delivery').value=c.delivery_day||'';
+  document.getElementById('cust-card-code').value=c.card_code||'';
+  for(let i=1;i<=6;i++){
+    const cb = document.getElementById(`week_${i}`);
+    if(cb) cb.checked = c[`week_${i}`]===1;
+  }
+  document.getElementById('cust-modal').style.display='flex';
+}
+function closeCustModal(){
+  document.getElementById('cust-modal').style.display='none';
+}
+async function saveCust(){
+  const id    = document.getElementById('cust-id').value;
+  const name  = document.getElementById('cust-name').value.trim();
+  const city  = document.getElementById('cust-city').value.trim();
+  const region= document.getElementById('cust-region').value.trim();
+  const day   = document.getElementById('cust-day').value;
+  const delivery=document.getElementById('cust-delivery').value.trim();
+  const card  = document.getElementById('cust-card-code').value.trim();
+  if(!name){ toast('שם לקוח חובה','#dc2626'); return; }
+  const weeks = [];
+  for(let i=1;i<=6;i++){ if(document.getElementById(`week_${i}`)?.checked) weeks.push(i); }
+  const r = await fetch(`/admin/api/customers/${id}`,{
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name,city,address:'',region,day,delivery_day:delivery,card_code:card,weeks})
+  });
+  const res = await r.json();
+  if(res.ok||res.id){
+    closeCustModal();
+    toast('לקוח עודכן ✓');
+    await loadDrawerCustomers();
+  } else {
+    toast(res.error||'שגיאה','#dc2626');
+  }
+}
+async function deleteCust(id, name){
+  if(!confirm(`מחיקת לקוח "${name}"?`)) return;
+  const r = await fetch(`/admin/api/customers/${id}`,{method:'DELETE'});
+  const res = await r.json();
+  if(res.ok){ toast('לקוח נמחק'); await loadDrawerCustomers(); await loadAgents(); }
+  else toast(res.error||'שגיאה','#dc2626');
+}
+
+// ─── Helpers ───
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function toast(msg, bg='#15803d'){
+  const t = document.getElementById('toast');
+  t.textContent=msg;
+  t.style.background=bg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// Enter key on modals
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){
+    closeAgentModal(); closeExcelModal(); closeDrawer(); closeCustModal();
+  }
+});
+
+loadAgents();
+</script>
+</body>
+</html>
