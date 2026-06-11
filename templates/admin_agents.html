@@ -434,6 +434,11 @@ function openAddAgentModal(){
   document.getElementById('am-upload-name').style.display = 'none';
   document.getElementById('am-import-result').style.display = 'none';
   agentExcelFile = null;
+  // ← תמיד מאפס את כפתור השמירה לפונקציה הנכונה
+  const btn = document.getElementById('am-save-btn');
+  btn.onclick = saveAgent;
+  btn.textContent = '💾 שמור';
+  btn.disabled = false;
   document.getElementById('agent-modal').style.display = 'flex';
   setTimeout(() => document.getElementById('am-name').focus(), 80);
 }
@@ -448,6 +453,11 @@ function openEditAgentModal(id){
   document.getElementById('am-password').value = '';
   document.getElementById('am-pass-hint').textContent = '(השאר ריק לאי-שינוי)';
   document.getElementById('am-excel-section').style.display = 'none';
+  document.getElementById('am-import-result').style.display = 'none';
+  const btn = document.getElementById('am-save-btn');
+  btn.onclick = saveAgent;
+  btn.textContent = '💾 שמור';
+  btn.disabled = false;
   document.getElementById('agent-modal').style.display = 'flex';
 }
 
