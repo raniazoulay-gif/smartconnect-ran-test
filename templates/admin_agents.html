@@ -328,7 +328,9 @@ async function loadAll(){
     await Promise.all(agentsData.map(a => loadAgentCustomers(a)));
     render();
   } catch(e){
-    document.getElementById('page-loading').textContent = 'שגיאה בטעינה';
+    console.error('[loadAll] error:', e);
+    const pl = document.getElementById('page-loading');
+    if(pl) pl.textContent = 'שגיאה בטעינה';
   }
 }
 
@@ -345,8 +347,10 @@ async function loadAgentCustomers(agent){
 // ─────────────────────────────────────────────────────────
 function render(){
   const body = document.getElementById('page-body');
-  document.getElementById('page-loading').style.display = 'none';
-  document.getElementById('page-count').textContent = `${agentsData.length} סוכנים`;
+  const pl = document.getElementById('page-loading');
+  if(pl) pl.style.display = 'none';
+  const pc = document.getElementById('page-count');
+  if(pc) pc.textContent = `${agentsData.length} סוכנים`;
 
   body.innerHTML = agentsData.map(a => `
     <div class="agent-section" id="sec-${a.id}">
