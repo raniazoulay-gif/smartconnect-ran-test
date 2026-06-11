@@ -320,13 +320,33 @@ let agentExcelFile = null;
 // ─────────────────────────────────────────────────────────
 //  LOAD
 // ─────────────────────────────────────────────────────────
+// שמור מצב (scroll + אילו סוכנים פתוחים) לפני render, שחזר אחרי
+function renderPreserving(){
+  const scrollY = window.scrollY;
+  // שמור אילו sections סגורים
+  const closedIds = new Set();
+  document.querySelectorAll('[id^="body-"]').forEach(el => {
+    if(!el.classList.contains('open'))
+      closedIds.add(el.id.replace('body-',''));
+  });
+  render();
+  // סגור מחדש את מה שהיה סגור
+  closedIds.forEach(id => {
+    const b = document.getElementById(`body-${id}`);
+    const c = document.getElementById(`chev-${id}`);
+    if(b) b.classList.remove('open');
+    if(c) c.classList.remove('open');
+  });
+  window.scrollTo(0, scrollY);
+}
+
 async function loadAll(){
   try{
     const r = await fetch('/admin/api/agents');
     agentsData = await r.json();
     // Load customers per agent in parallel
     await Promise.all(agentsData.map(a => loadAgentCustomers(a)));
-    render();
+    renderPreserving();
   } catch(e){
     console.error('[loadAll] error:', e);
     const pl = document.getElementById('page-loading');
@@ -692,23 +712,52 @@ async function saveCust(){
   btn.disabled = false; btn.textContent = '💾 שמור';
 
   if(res.ok || res.id){
-    // If new customer and agent has this region — update agent regions if needed
-    if(!id && agentId && region){
-      const agent = agentsData.find(a => a.id === parseInt(agentId));
-      if(agent){
-        const currentRegions = (agent.regions||'').split(',').map(x=>x.trim()).filter(Boolean);
-        if(!currentRegions.includes(region)){
-          currentRegions.push(region);
-          await fetch(`/admin/api/agents/${agentId}`, {
-            method:'PUT', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({name:agent.name, username:agent.username, password:'', regions:currentRegions.join(',')})
-          });
+    closeCustModal();
+    if(id){
+      // עריכת לקוח קיים — עדכן ישירות בזיכרון (ללא re-fetch) כדי שהלקוח לא יזוז
+      const HEB = {א:'ראשון',ב:'שני',ג:'שלישי',ד:'רביעי',ה:'חמישי'};
+      const custId = parseInt(id);
+      for(const agent of agentsData){
+        const idx = agent.customers.findIndex(c => c.id === custId);
+        if(idx !== -1){
+          agent.customers[idx] = {
+            ...agent.customers[idx],
+            name, city, region,
+            day: day||'',
+            day_name: HEB[day]||'—',
+            delivery_day: delivery||'',
+            card_code: cardCode||'',
+            week_1: weeks.includes(1)?1:0,
+            week_2: weeks.includes(2)?1:0,
+            week_3: weeks.includes(3)?1:0,
+            week_4: weeks.includes(4)?1:0,
+            week_5: weeks.includes(5)?1:0,
+            week_6: weeks.includes(6)?1:0,
+            weeks_display: weeks.length ? weeks.map(w=>`ש${w}`).join(' ') : '—'
+          };
+          break;
         }
       }
+      toast('לקוח עודכן ✓');
+      renderPreserving();
+    } else {
+      // לקוח חדש — טען הכל מחדש
+      if(agentId && region){
+        const agent = agentsData.find(a => a.id === parseInt(agentId));
+        if(agent){
+          const currentRegions = (agent.regions||'').split(',').map(x=>x.trim()).filter(Boolean);
+          if(!currentRegions.includes(region)){
+            currentRegions.push(region);
+            await fetch(`/admin/api/agents/${agentId}`, {
+              method:'PUT', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({name:agent.name, username:agent.username, password:'', regions:currentRegions.join(',')})
+            });
+          }
+        }
+      }
+      toast('לקוח נוסף ✓');
+      await loadAll();
     }
-    closeCustModal();
-    toast(id ? 'לקוח עודכן ✓' : 'לקוח נוסף ✓');
-    await loadAll();
   } else {
     toast(res.error || 'שגיאה', '#dc2626');
   }
