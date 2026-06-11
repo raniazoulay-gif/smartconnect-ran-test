@@ -664,6 +664,9 @@ async def api_agent_import_excel(request: Request, agent_id: int, file: UploadFi
             return 0
         return 1 if v.lower() in ("v", "v", "✓", "1", "x") else 0
 
+    # אזור ברירת מחדל = שם הסוכן (אם ל-Excel אין עמודת אזור)
+    default_region = agent_row["name"]
+
     db = get_db()
     inserted = 0
     skipped  = 0
@@ -676,7 +679,7 @@ async def api_agent_import_excel(request: Request, agent_id: int, file: UploadFi
             skipped += 1
             continue
         city         = get_cell(row, "city") or ""
-        region       = get_cell(row, "region") or ""
+        region       = get_cell(row, "region") or default_region  # ← fallback לשם הסוכן
         delivery_day = get_cell(row, "delivery_day") or ""
         visit_day_raw = get_cell(row, "visit_day") or ""
         visit_day    = HEBREW_DAYS.get(visit_day_raw, visit_day_raw)
@@ -688,8 +691,7 @@ async def api_agent_import_excel(request: Request, agent_id: int, file: UploadFi
         w5 = week_val(row, "week_5")
         w6 = week_val(row, "week_6")
 
-        if region:
-            new_regions.add(region)
+        new_regions.add(region)  # תמיד מוסיף — גם אם region = default_region
 
         try:
             db.execute(
