@@ -471,6 +471,311 @@ async def api_import_excel(request: Request, file: UploadFile = File(...)):
     })
 
 
+# ── Agents Page ───────────────────────────────────────────────────────────────
+@admin_router.get("/agents", response_class=HTMLResponse)
+async def admin_agents_page(request: Request):
+    if not _get_admin(request):
+        return RedirectResponse("/admin/login")
+    return _tpl.TemplateResponse("admin_agents.html", {"request": request, "cfg": COMPANY_CONFIG})
+
+
+# ── API — Agents List ──────────────────────────────────────────────────────────
+@admin_router.get("/api/agents")
+async def api_agents_list(request: Request):
+    if not _get_admin(request):
+        return JSONResponse({"error": "אין הרשאה"}, status_code=401)
+    db = get_db()
+    rows = db.execute(
+        "SELECT id, name, username, regions FROM users WHERE role='agent' ORDER BY name"
+    ).fetchall()
+    db.close()
+    result = []
+    for r in rows:
+        regions = [x.strip() for x in (r["regions"] or "").split(",") if x.strip()]
+        db2 = get_db()
+        count = db2.execute(
+            "SELECT COUNT(*) FROM customers WHERE (deleted_at IS NULL OR deleted_at='') AND region IN (" +
+            ",".join(["?" for _ in regions]) + ")",
+            regions
+        ).fetchone()[0] if regions else 0
+        db2.close()
+        result.append({
+            "id":       r["id"],
+            "name":     r["name"],
+            "username": r["username"],
+            "regions":  r["regions"] or "",
+            "customer_count": count,
+        })
+    return JSONResponse(result)
+
+
+# ── API — Create Agent ────────────────────────────────────────────────────────
+@admin_router.post("/api/agents")
+async def api_agents_create(request: Request):
+    if not _get_admin(request):
+        return JSONResponse({"error": "אין הרשאה"}, status_code=401)
+    from database import hash_password
+    data     = await request.json()
+    name     = (data.get("name") or "").strip()
+    username = (data.get("username") or "").strip()
+    password = (data.get("password") or "").strip()
+    regions  = (data.get("regions") or "").strip()
+    if not name or not username or not password:
+        return JSONResponse({"error": "שם, שם משתמש וסיסמה הם שדות חובה"}, status_code=400)
+    db = get_db()
+    try:
+        cur = db.execute(
+            "INSERT INTO users (name, username, password_hash, role, regions) VALUES (?,?,?,?,?)",
+            (name, username, hash_password(password), "agent", regions)
+        )
+        new_id = cur.lastrowid
+        db.commit()
+    except Exception as e:
+        db.close()
+        if "unique" in str(e).lower() or "duplicate" in str(e).lower():
+            return JSONResponse({"error": f"שם המשתמש '{username}' כבר קיים"}, status_code=409)
+        return JSONResponse({"error": str(e)}, status_code=500)
+    db.close()
+    return JSONResponse({"ok": True, "id": new_id})
+
+
+# ── API — Update Agent ────────────────────────────────────────────────────────
+@admin_router.put("/api/agents/{agent_id}")
+async def api_agents_update(request: Request, agent_id: int):
+    if not _get_admin(request):
+        return JSONResponse({"error": "אין הרשאה"}, status_code=401)
+    from database import hash_password
+    data     = await request.json()
+    name     = (data.get("name") or "").strip()
+    username = (data.get("username") or "").strip()
+    password = (data.get("password") or "").strip()
+    regions  = (data.get("regions") or "").strip()
+    if not name or not username:
+        return JSONResponse({"error": "שם ושם משתמש הם שדות חובה"}, status_code=400)
+    db = get_db()
+    try:
+        if password:
+            db.execute(
+                "UPDATE users SET name=?, username=?, password_hash=?, regions=? WHERE id=? AND role='agent'",
+                (name, username, hash_password(password), regions, agent_id)
+            )
+        else:
+            db.execute(
+                "UPDATE users SET name=?, username=?, regions=? WHERE id=? AND role='agent'",
+                (name, username, regions, agent_id)
+            )
+        db.commit()
+    except Exception as e:
+        db.close()
+        if "unique" in str(e).lower() or "duplicate" in str(e).lower():
+            return JSONResponse({"error": f"שם המשתמש '{username}' כבר קיים"}, status_code=409)
+        return JSONResponse({"error": str(e)}, status_code=500)
+    db.close()
+    return JSONResponse({"ok": True})
+
+
+# ── API — Delete Agent ────────────────────────────────────────────────────────
+@admin_router.delete("/api/agents/{agent_id}")
+async def api_agents_delete(request: Request, agent_id: int):
+    if not _get_admin(request):
+        return JSONResponse({"error": "אין הרשאה"}, status_code=401)
+    db = get_db()
+    db.execute("DELETE FROM users WHERE id=? AND role='agent'", (agent_id,))
+    db.commit()
+    db.close()
+    return JSONResponse({"ok": True})
+
+
+# ── API — Import Excel for Agent ───────────────────────────────────────────────
+@admin_router.post("/api/agents/{agent_id}/import-excel")
+async def api_agent_import_excel(request: Request, agent_id: int, file: UploadFile = File(...)):
+    if not _get_admin(request):
+        return JSONResponse({"error": "אין הרשאה"}, status_code=401)
+    try:
+        import openpyxl
+    except ImportError:
+        return JSONResponse({"error": "חסר מודול openpyxl"}, status_code=500)
+
+    # ── Verify agent exists ──
+    db = get_db()
+    agent_row = db.execute("SELECT id, name, regions FROM users WHERE id=? AND role='agent'", (agent_id,)).fetchone()
+    db.close()
+    if not agent_row:
+        return JSONResponse({"error": "סוכן לא נמצא"}, status_code=404)
+
+    contents = await file.read()
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(contents), data_only=True)
+    except Exception as e:
+        return JSONResponse({"error": f"שגיאה בקריאת Excel: {e}"}, status_code=400)
+
+    ws = wb.active
+
+    # ── Auto-detect header row ──
+    header_row_idx = None
+    for i, row in enumerate(ws.iter_rows(min_row=1, max_row=15, values_only=True), start=1):
+        non_empty = sum(1 for c in row if c is not None and str(c).strip())
+        if non_empty >= 3:
+            header_row_idx = i
+            break
+    if header_row_idx is None:
+        return JSONResponse({"error": "לא נמצאה שורת כותרות ב-Excel"}, status_code=400)
+
+    headers = [str(ws.cell(header_row_idx, c).value or "").strip().lower()
+               for c in range(1, ws.max_column + 1)]
+
+    # ── Flexible column mapping ──
+    COL_ALIASES = {
+        "name":             ["name", "שם", "שם לקוח", "שם חנות", "customer_name"],
+        "city":             ["city", "עיר"],
+        "region":           ["region", "אזור", "סוכן"],
+        "delivery_day":     ["delivery_day", "יום אספקה", "ימי אספקה", "ימיי אספקה", "delivery"],
+        "visit_day":        ["visit_day", "יום ביקור", "visit day"],
+        "card_code":        ["card_code", "קוד לקוח", "קוד", "bp_code"],
+        "week_1":           ["שבוע1", "שבוע 1", "week1", "week_1", "ש1"],
+        "week_2":           ["שבוע2", "שבוע 2", "week2", "week_2", "ש2"],
+        "week_3":           ["שבוע3", "שבוע 3", "week3", "week_3", "ש3"],
+        "week_4":           ["שבוע4", "שבוע 4", "week4", "week_4", "ש4"],
+        "week_5":           ["שבוע5", "שבוע 5", "week5", "week_5", "ש5"],
+        "week_6":           ["שבוע6", "שבוע 6", "week6", "week_6", "ש6"],
+    }
+    HEBREW_DAYS = {"ראשון": "א", "שני": "ב", "שלישי": "ג", "רביעי": "ד", "חמישי": "ה", "שישי": "ו"}
+
+    col_idx = {}
+    for field, aliases in COL_ALIASES.items():
+        for alias in aliases:
+            if alias.lower() in headers:
+                col_idx[field] = headers.index(alias.lower())
+                break
+
+    if col_idx.get("name") is None:
+        return JSONResponse({"error": "לא נמצאה עמודת שם לקוח (שם / name / שם לקוח)"}, status_code=400)
+
+    def get_cell(row, field):
+        idx = col_idx.get(field)
+        if idx is None:
+            return None
+        v = row[idx]
+        return str(v).strip() if v is not None else None
+
+    def week_val(row, field):
+        v = get_cell(row, field)
+        if v is None:
+            return 0
+        return 1 if v.lower() in ("v", "v", "✓", "1", "x") else 0
+
+    db = get_db()
+    inserted = 0
+    skipped  = 0
+    errors   = []
+    new_regions = set()
+
+    for row_num, row in enumerate(ws.iter_rows(min_row=header_row_idx + 1, values_only=True), start=header_row_idx + 1):
+        name = get_cell(row, "name")
+        if not name:
+            skipped += 1
+            continue
+        city         = get_cell(row, "city") or ""
+        region       = get_cell(row, "region") or ""
+        delivery_day = get_cell(row, "delivery_day") or ""
+        visit_day_raw = get_cell(row, "visit_day") or ""
+        visit_day    = HEBREW_DAYS.get(visit_day_raw, visit_day_raw)
+        card_code    = get_cell(row, "card_code") or ""
+        w1 = week_val(row, "week_1")
+        w2 = week_val(row, "week_2")
+        w3 = week_val(row, "week_3")
+        w4 = week_val(row, "week_4")
+        w5 = week_val(row, "week_5")
+        w6 = week_val(row, "week_6")
+
+        if region:
+            new_regions.add(region)
+
+        try:
+            db.execute(
+                """INSERT INTO customers
+                   (card_code, name, city, region, delivery_day, visit_day, assigned_visit_day,
+                    week_1, week_2, week_3, week_4, week_5, week_6, traffic_light)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (card_code, name, city, region, delivery_day, visit_day, visit_day,
+                 w1, w2, w3, w4, w5, w6, "ירוק")
+            )
+            inserted += 1
+        except Exception as e:
+            errors.append(f"שורה {row_num}: {e}")
+
+    # ── Update agent regions ──
+    existing_regions = set(r.strip() for r in (agent_row["regions"] or "").split(",") if r.strip())
+    all_regions = existing_regions | new_regions
+    db.execute("UPDATE users SET regions=? WHERE id=?", (",".join(sorted(all_regions)), agent_id))
+
+    db.commit()
+    db.close()
+
+    return JSONResponse({
+        "ok": True,
+        "inserted": inserted,
+        "skipped": skipped,
+        "errors": errors[:10],
+        "message": f"יובאו {inserted} לקוחות לסוכן {agent_row['name']}",
+        "new_regions": sorted(new_regions),
+    })
+
+
+# ── API — Customers for Agent ─────────────────────────────────────────────────
+@admin_router.get("/api/agents/{agent_id}/customers")
+async def api_agent_customers(request: Request, agent_id: int, q: str = "", day: str = ""):
+    if not _get_admin(request):
+        return JSONResponse({"error": "אין הרשאה"}, status_code=401)
+    db = get_db()
+    agent_row = db.execute("SELECT id, name, regions FROM users WHERE id=? AND role='agent'", (agent_id,)).fetchone()
+    db.close()
+    if not agent_row:
+        return JSONResponse({"error": "סוכן לא נמצא"}, status_code=404)
+
+    regions = [r.strip() for r in (agent_row["regions"] or "").split(",") if r.strip()]
+    if not regions:
+        return JSONResponse({"agent": agent_row["name"], "customers": []})
+
+    db = get_db()
+    ph = ",".join(["?" for _ in regions])
+    sql = (
+        "SELECT id, card_code, name, city, region, assigned_visit_day, visit_day, delivery_day, "
+        "week_1, week_2, week_3, week_4, week_5, week_6 "
+        "FROM customers WHERE (deleted_at IS NULL OR deleted_at='') "
+        f"AND region IN ({ph})"
+    )
+    params = list(regions)
+    if q:
+        sql += " AND (name LIKE ? OR city LIKE ?)"
+        params += [f"%{q}%", f"%{q}%"]
+    if day:
+        sql += " AND assigned_visit_day = ?"
+        params.append(day)
+    sql += " ORDER BY region, assigned_visit_day, name LIMIT 500"
+    rows = db.execute(sql, params).fetchall()
+    db.close()
+
+    result = []
+    for r in rows:
+        w = _row_to_weeks(r)
+        weeks_active = [i for i in range(1, 7) if w[f"week_{i}"]]
+        result.append({
+            "id":           r["id"],
+            "card_code":    r["card_code"] or "",
+            "name":         r["name"],
+            "city":         r["city"] or "",
+            "region":       r["region"] or "",
+            "day":          r["assigned_visit_day"] or "",
+            "day_name":     HEB_DAYS.get(r["assigned_visit_day"] or "", "—"),
+            "delivery_day": r["delivery_day"] or "",
+            "week_1": w["week_1"], "week_2": w["week_2"], "week_3": w["week_3"],
+            "week_4": w["week_4"], "week_5": w["week_5"], "week_6": w["week_6"],
+            "weeks_display": " ".join([f"ש{i}" for i in weeks_active]) if weeks_active else "—",
+        })
+    return JSONResponse({"agent": agent_row["name"], "customers": result})
+
+
 @admin_router.get("/api/trash")
 async def api_trash_list(request: Request):
     if not _get_admin(request):
